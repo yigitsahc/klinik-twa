@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Klinik Veri Girişi</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --surface: #1a1d27;
+    --surface2: #222535;
+    --border: #2e3248;
+    --accent: #4e7cff;
+    --accent2: #00c9a7;
+    --warn: #ff7043;
+    --text: #e8eaf6;
+    --text2: #8b90b8;
+    --text3: #5a6080;
+    --red: #ff5252;
+    --radius: 12px;
+    --font: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 100px;
+  }
+
+  /* ---- Header ---- */
+  .header {
+    position: sticky; top: 0; z-index: 100;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px 10px;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .header-icon {
+    width: 36px; height: 36px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  .header p { font-size: 12px; color: var(--text2); margin-top: 1px; }
+
+  /* ---- Tab bar ---- */
+  .tabs {
+    display: flex; gap: 6px;
+    padding: 12px 16px 0;
+    overflow-x: auto; scrollbar-width: none;
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex-shrink: 0;
+    padding: 7px 14px;
+    border-radius: 20px;
+    font-size: 13px; font-weight: 500;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all .2s;
+  }
+  .tab.active {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+
+  /* ---- Section ---- */
+  .section { display: none; padding: 16px; }
+  .section.active { display: block; }
+
+  /* ---- Card ---- */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .card-header {
+    padding: 12px 14px 8px;
+    font-size: 11px; font-weight: 600;
+    color: var(--text3);
+    text-transform: uppercase; letter-spacing: 0.8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .card-body { padding: 4px 0; }
+
+  /* ---- Form rows ---- */
+  .row {
+    display: flex; align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    gap: 10px;
+  }
+  .row:last-child { border-bottom: none; }
+  .row label {
+    font-size: 13px; color: var(--text2);
+    min-width: 108px; flex-shrink: 0;
+  }
+  .row input, .row select, .row textarea {
+    flex: 1;
+    background: transparent;
+    border: none; outline: none;
+    font-family: var(--font);
+    font-size: 14px;
+    color: var(--text);
+    text-align: right;
+  }
+  .row select option { background: #1a1d27; }
+  .row textarea {
+    resize: none; text-align: left;
+    padding: 4px 0; min-height: 60px;
+    line-height: 1.5;
+  }
+  .row input::placeholder, .row textarea::placeholder { color: var(--text3); }
+  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
+
+  /* ---- Diş seçici ---- */
+  .tooth-grid {
+    padding: 12px 14px;
+    display: grid; grid-template-columns: repeat(16, 1fr);
+    gap: 3px;
+  }
+  .tooth-grid-labels {
+    display: grid; grid-template-columns: 1fr 1fr;
+    padding: 0 14px 4px;
+    font-size: 10px; color: var(--text3);
+  }
+  .tooth-grid-labels span:last-child { text-align: right; }
+  .tooth {
+    aspect-ratio: 1;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    background: var(--surface2);
+    font-size: 9px; color: var(--text3);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: all .15s;
+    font-weight: 500;
+  }
+  .tooth.selected {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .tooth-separator {
+    grid-column: span 16;
+    height: 1px; background: var(--border);
+    margin: 3px 0;
+  }
+  .tooth-display {
+    padding: 6px 14px 10px;
+    font-size: 12px; color: var(--text2);
+    min-height: 28px;
+  }
+
+  /* ---- İşlem listesi ---- */
+  .proc-list { padding: 4px 0; }
+  .proc-item {
+    padding: 9px 14px;
+    font-size: 13px; color: var(--text);
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer; transition: background .15s;
+    border-bottom: 1px solid var(--border);
+  }
+  .proc-item:last-child { border-bottom: none; }
+  .proc-item:active { background: var(--surface2); }
+  .proc-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--border); flex-shrink: 0;
+    transition: background .15s;
+  }
+  .proc-item.selected .proc-dot { background: var(--accent2); }
+  .proc-item.selected { color: var(--accent2); }
+  .proc-search {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .proc-search input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; color: var(--text);
+    font-family: var(--font);
+    outline: none;
+  }
+
+  /* ---- Teşhis ---- */
+  .diag-search { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+  .diag-search input {
+    width: 100%; background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px; padding: 8px 12px;
+    font-size: 13px; color: var(--text);
+    font-family: var(--font); outline: none;
+  }
+  .diag-item {
+    padding: 9px 14px;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background .15s;
+  }
+  .diag-item:last-child { border-bottom: none; }
+  .diag-item:active { background: var(--surface2); }
+  .diag-code { font-size: 12px; color: var(--accent); font-weight: 600; }
+  .diag-name { font-size: 13px; color: var(--text); margin-top: 1px; }
+  .diag-item.selected { background: rgba(78,124,255,0.1); }
+  .diag-item.selected .diag-code { color: var(--accent2); }
+
+  /* ---- Pill tags ---- */
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
+  .tag {
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 12px; font-weight: 500;
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--text2); cursor: pointer; transition: all .15s;
+  }
+  .tag.selected { background: rgba(0,201,167,0.15); border-color: var(--accent2); color: var(--accent2); }
+
+  /* ---- Çıktı alanı ---- */
+  .output-box {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .output-label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.8px; color: var(--text3);
+    margin-bottom: 10px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .copy-btn {
+    background: var(--accent);
+    border: none; border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; font-weight: 600;
+    color: #fff; cursor: pointer; transition: opacity .15s;
+    font-family: var(--font);
+  }
+  .copy-btn:active { opacity: 0.7; }
+  .output-text {
+    font-size: 12px; color: var(--text);
+    line-height: 1.7; white-space: pre-wrap;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  /* ---- Action button ---- */
+  .action-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    padding: 12px 16px;
+    background: var(--bg);
+    border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .btn-primary {
+    flex: 1; padding: 14px;
+    background: linear-gradient(135deg, var(--accent), #6c5ce7);
+    border: none; border-radius: var(--radius);
+    font-size: 15px; font-weight: 600;
+    color: #fff; cursor: pointer;
+    font-family: var(--font);
+    transition: opacity .15s;
+  }
+  .btn-primary:active { opacity: 0.85; }
+  .btn-secondary {
+    padding: 14px 18px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px; font-weight: 500;
+    color: var(--text2); cursor: pointer;
+    font-family: var(--font);
+  }
+
+  /* ---- Toast ---- */
+  .toast {
+    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
+    background: var(--accent2); color: #fff;
+    padding: 10px 20px; border-radius: 20px;
+    font-size: 13px; font-weight: 600;
+    opacity: 0; transition: opacity .3s;
+    pointer-events: none; z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { opacity: 1; }
+
+  .section-title {
+    font-size: 13px; font-weight: 600;
+    color: var(--text2); padding: 0 0 8px;
+    letter-spacing: -0.2px;
+  }
+
+  /* Chevron for select */
+  .row select { appearance: none; -webkit-appearance: none; }
+
+  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-icon">🦷</div>
+  <div>
+    <h1>Klinik Veri Girişi</h1>
+    <p>Merzifon Diş Kliniği</p>
+  </div>
+</div>
+
+<div class="tabs">
+  <button class="tab active" onclick="switchTab(0)">👤 Hasta</button>
+  <button class="tab" onclick="switchTab(1)">🦷 Tedavi</button>
+  <button class="tab" onclick="switchTab(2)">💳 Ödeme</button>
+  <button class="tab" onclick="switchTab(3)">📋 Çıktı</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ===================== TAB 0: HASTA ===================== -->
+<div class="section active" id="tab0">
+  <div class="card">
+    <div class="card-header">Hasta Bilgileri</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Ad Soyad</label>
+        <input type="text" id="p_name" placeholder="Ali Vural" autocomplete="off">
+      </div>
+      <div class="row">
+        <label>T.C. Kimlik</label>
+        <input type="tel" id="p_tc" placeholder="12345678901" maxlength="11">
+      </div>
+      <div class="row">
+        <label>Doğum Tarihi</label>
+        <input type="date" id="p_dob">
+      </div>
+      <div class="row">
+        <label>Telefon</label>
+        <input type="tel" id="p_phone" placeholder="05xx xxx xx xx">
+      </div>
+      <div class="row">
+        <label>Cinsiyet</label>
+        <select id="p_gender">
+          <option value="">Seçin</option>
+          <option value="E">Erkek</option>
+          <option value="K">Kadın</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Ziyaret</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Tarih</label>
+        <input type="date" id="v_date" value="">
+      </div>
+      <div class="row">
+        <label>Şikayet</label>
+        <textarea id="v_complaint" placeholder="Hastanın şikayeti..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TAB 1: TEDAVİ ===================== -->
+<div class="section" id="tab1">
+
+  <div class="card">
+    <div class="card-header">Diş Seçimi</div>
+    <div class="tooth-grid-labels">
+      <span>Üst Sağ →</span>
+      <span>← Üst Sol</span>
+    </div>
+    <div class="tooth-grid" id="toothGrid"></div>
+    <div class="tooth-display" id="toothDisplay">Diş seçilmedi</div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Teşhis (ICD-10)</div>
+    <div class="diag-search">
+      <input type="text" id="diagSearch" placeholder="Teşhis ara... (ör: çürük, pulpit)" oninput="filterDiag()">
+    </div>
+    <div class="proc-list" id="diagList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Yapılan İşlem</div>
+    <div class="proc-search">
+      <input type="text" id="procSearch" placeholder="İşlem ara... (ör: dolgu, implant)" oninput="filterProcs()">
+    </div>
+    <div class="proc-list" id="procList"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Not</div>
+    <div class="card-body">
+      <div class="row">
+        <textarea id="t_note" placeholder="Klinik not, malzeme, özel durum..."></textarea>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TAB 2: ÖDEME ===================== -->
+<div class="section" id="tab2">
+  <div class="card">
+    <div class="card-header">Ücret</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Tutar (₺)</label>
+        <input type="number" id="pay_amount" placeholder="0">
+      </div>
+      <div class="row">
+        <label>İndirim (₺)</label>
+        <input type="number" id="pay_discount" placeholder="0">
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Ödeme Türü</div>
+    <div class="tags" id="payTypeTags">
+      <span class="tag" onclick="selTag(this,'payType')">Nakit</span>
+      <span class="tag" onclick="selTag(this,'payType')">Kredi Kartı</span>
+      <span class="tag" onclick="selTag(this,'payType')">Banka Kartı</span>
+      <span class="tag" onclick="selTag(this,'payType')">Havale/EFT</span>
+      <span class="tag" onclick="selTag(this,'payType')">SGK</span>
+      <span class="tag" onclick="selTag(this,'payType')">Taksit</span>
+    </div>
+  </div>
+
+  <div class="card" id="installCard" style="display:none">
+    <div class="card-header">Taksit</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Taksit sayısı</label>
+        <select id="pay_inst">
+          <option>2</option><option>3</option><option>4</option>
+          <option>6</option><option>9</option><option>12</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">Ödeme Durumu</div>
+    <div class="tags" id="payStatusTags">
+      <span class="tag selected" onclick="selTag(this,'payStatus')">Ödendi</span>
+      <span class="tag" onclick="selTag(this,'payStatus')">Bekliyor</span>
+      <span class="tag" onclick="selTag(this,'payStatus')">Kısmi Ödeme</span>
+    </div>
+  </div>
+
+  <div class="card" id="partialCard" style="display:none">
+    <div class="card-header">Ödenen Miktar</div>
+    <div class="card-body">
+      <div class="row">
+        <label>Ödenen (₺)</label>
+        <input type="number" id="pay_partial" placeholder="0">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== TAB 3: ÇIKTI ===================== -->
+<div class="section" id="tab3">
+  <div class="output-box">
+    <div class="output-label">
+      <span>🏥 E-Nabız / MBYS</span>
+      <button class="copy-btn" onclick="copyText('enaOut')">Kopyala</button>
+    </div>
+    <div class="output-text" id="enaOut">—</div>
+  </div>
+
+  <div class="output-box">
+    <div class="output-label">
+      <span>📱 Klinik Uygulama (JSON)</span>
+      <button class="copy-btn" onclick="copyText('jsonOut')">Kopyala</button>
+    </div>
+    <div class="output-text" id="jsonOut">—</div>
+  </div>
+
+  <div style="margin-top:4px; margin-bottom:8px;">
+    <button class="btn-primary" style="width:100%;display:block" onclick="importToClinic()">
+      📲 Klinik Uygulamasına Aktar
+    </button>
+  </div>
+  <p style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:8px;">
+    Klinik uygulaması aynı cihazda açıksa localStorage'a yazar
+  </p>
+</div>
+
+<div class="action-bar">
+  <button class="btn-secondary" onclick="clearAll()">↺</button>
+  <button class="btn-primary" onclick="generate()">Çıktı Oluştur</button>
+</div>
+
+<script>
+// ============ DATA ============
+const TEETH_UPPER = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
+const TEETH_LOWER = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+
+const DIAGNOSES = [
+  {code:'K02.0',name:'Mine çürüğü'},
+  {code:'K02.1',name:'Dentin çürüğü'},
+  {code:'K02.2',name:'Sement çürüğü'},
+  {code:'K02.3',name:'Durdurulmuş diş çürüğü'},
+  {code:'K02.5',name:'Diş pulpasını tutan çürük'},
+  {code:'K04.0',name:'Pulpitis'},
+  {code:'K04.1',name:'Pulpa nekrozu'},
+  {code:'K04.5',name:'Kronik apikal periodontitis'},
+  {code:'K04.6',name:'Periapikal apse (fistüllü)'},
+  {code:'K04.7',name:'Periapikal apse (fistülsüz)'},
+  {code:'K05.0',name:'Akut gingivitis'},
+  {code:'K05.1',name:'Kronik gingivitis'},
+  {code:'K05.2',name:'Akut periodontitis'},
+  {code:'K05.3',name:'Kronik periodontitis'},
+  {code:'K06.0',name:'Diş eti çekilmesi'},
+  {code:'K08.0',name:'Travma sonrası diş kaybı'},
+  {code:'K08.1',name:'Çürük nedeniyle diş kaybı'},
+  {code:'K08.3',name:'Kökü kalmış diş'},
+  {code:'K08.8',name:'Diş ve destekleyici yapı hastalıkları'},
+  {code:'K09.0',name:'Gelişimsel odontojen kist'},
+  {code:'S02.5',name:'Diş kırığı (travma)'},
+  {code:'Z01.2',name:'Diş muayenesi'},
+  {code:'Z46.3',name:'Protez uyumu kontrolü'},
+];
+
+const PROCEDURES = [
+  // Restoratif
+  'Amalgam dolgu (1 yüzey)','Amalgam dolgu (2 yüzey)','Amalgam dolgu (3+ yüzey)',
+  'Kompozit dolgu (1 yüzey)','Kompozit dolgu (2 yüzey)','Kompozit dolgu (3+ yüzey)',
+  'Cam iyonomer dolgu','Geçici dolgu','İnley / Onley',
+  // Endodonti
+  'Kanal tedavisi (ön diş)','Kanal tedavisi (küçük azı)','Kanal tedavisi (büyük azı)',
+  'Kanal tedavisi yenileme','Apikektomi',
+  // Cerrahi
+  'Diş çekimi (süt)','Diş çekimi (daimi)','Gömük diş çekimi (cerrahi)',
+  'Alveol küretaj','Frenektomi','Kist operasyonu',
+  // Protez
+  'Metal-seramik kron','Zirkonyum kron','Tam seramik kron',
+  'Sabit köprü (üye başı)','Hareketli kısmi protez','Tam protez',
+  'Protez tamiri','Protez yenileme',
+  // İmplant
+  'İmplant yerleştirme','İmplant üstü kron','Sinus lifting',
+  'Kemik grefti','Membran uygulaması',
+  // Ortodonti
+  'Braket yapıştırma','Braket aktivasyonu','Şeffaf plak',
+  'Piyasalarda retainer',
+  // Diğer
+  'Diş taşı temizliği','Diş beyazlatma','Flor uygulaması',
+  'Fissür örtücü','Apse drenajı','Periodontal cerrahi',
+  'Kontrol / Muayene','Röntgen (periapikal)','Röntgen (panoramik)',
+];
+
+let selTeeth = new Set();
+let selDiag = null;
+let selProc = null;
+
+// ============ INIT ============
+document.addEventListener('DOMContentLoaded', () => {
+  // Today
+  const td = new Date().toISOString().split('T')[0];
+  document.getElementById('v_date').value = td;
+
+  // Telegram init
+  if(window.Telegram?.WebApp) {
+    Telegram.WebApp.ready();
+    Telegram.WebApp.expand();
+  }
+
+  buildToothGrid();
+  buildProcList();
+  buildDiagList();
+});
+
+// ============ TABS ============
+function switchTab(i) {
+  document.querySelectorAll('.section').forEach((s,idx) => s.classList.toggle('active', idx===i));
+  document.querySelectorAll('.tab').forEach((t,idx) => t.classList.toggle('active', idx===i));
+  if(i===3) generate();
+}
+
+// ============ TOOTH GRID ============
+function buildToothGrid() {
+  const grid = document.getElementById('toothGrid');
+  const makeTooth = n => {
+    const d = document.createElement('div');
+    d.className = 'tooth'; d.textContent = n; d.dataset.n = n;
+    d.onclick = () => toggleTooth(d, n);
+    return d;
+  };
+  TEETH_UPPER.forEach(n => grid.appendChild(makeTooth(n)));
+  const sep = document.createElement('div'); sep.className='tooth-separator'; grid.appendChild(sep);
+  TEETH_LOWER.forEach(n => grid.appendChild(makeTooth(n)));
+}
+function toggleTooth(el, n) {
+  if(selTeeth.has(n)) { selTeeth.delete(n); el.classList.remove('selected'); }
+  else { selTeeth.add(n); el.classList.add('selected'); }
+  const arr = [...selTeeth].sort((a,b)=>a-b);
+  document.getElementById('toothDisplay').textContent =
+    arr.length ? 'Seçili: ' + arr.join(', ') : 'Diş seçilmedi';
+}
+
+// ============ PROC LIST ============
+function buildProcList(filter='') {
+  const list = document.getElementById('procList');
+  list.innerHTML = '';
+  const fl = filter.toLowerCase();
+  PROCEDURES.filter(p => !fl || p.toLowerCase().includes(fl)).forEach(p => {
+    const div = document.createElement('div');
+    div.className = 'proc-item' + (selProc===p?' selected':'');
+    div.innerHTML = `<span class="proc-dot"></span>${p}`;
+    div.onclick = () => { selProc = selProc===p?null:p; buildProcList(fl); };
+    list.appendChild(div);
+  });
+}
+function filterProcs() { buildProcList(document.getElementById('procSearch').value); }
+
+// ============ DIAG LIST ============
+function buildDiagList(filter='') {
+  const list = document.getElementById('diagList');
+  list.innerHTML = '';
+  const fl = filter.toLowerCase();
+  DIAGNOSES.filter(d => !fl || d.code.toLowerCase().includes(fl) || d.name.toLowerCase().includes(fl)).forEach(d => {
+    const div = document.createElement('div');
+    div.className = 'diag-item' + (selDiag===d.code?' selected':'');
+    div.innerHTML = `<div class="diag-code">${d.code}</div><div class="diag-name">${d.name}</div>`;
+    div.onclick = () => { selDiag = selDiag===d.code?null:d.code; buildDiagList(fl); };
+    list.appendChild(div);
+  });
+}
+function filterDiag() { buildDiagList(document.getElementById('diagSearch').value); }
+
+// ============ TAGS ============
+function selTag(el, group) {
+  if(group==='payType') {
+    document.querySelectorAll('#payTypeTags .tag').forEach(t=>t.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('installCard').style.display = el.textContent==='Taksit'?'block':'none';
+  } else if(group==='payStatus') {
+    document.querySelectorAll('#payStatusTags .tag').forEach(t=>t.classList.remove('selected'));
+    el.classList.add('selected');
+    document.getElementById('partialCard').style.display = el.textContent==='Kısmi Ödeme'?'block':'none';
+  }
+}
+
+// ============ GENERATE ============
+function generate() {
+  const name   = document.getElementById('p_name').value.trim() || '—';
+  const tc     = document.getElementById('p_tc').value.trim() || '—';
+  const dob    = document.getElementById('p_dob').value || '—';
+  const phone  = document.getElementById('p_phone').value.trim() || '—';
+  const gender = document.getElementById('p_gender').value || '—';
+  const vdate  = document.getElementById('v_date').value || new Date().toISOString().split('T')[0];
+  const compl  = document.getElementById('v_complaint').value.trim() || '—';
+  const note   = document.getElementById('t_note').value.trim() || '';
+
+  const amount   = parseFloat(document.getElementById('pay_amount').value) || 0;
+  const discount = parseFloat(document.getElementById('pay_discount').value) || 0;
+  const net      = amount - discount;
+
+  const payTypeEl = document.querySelector('#payTypeTags .tag.selected');
+  const payType   = payTypeEl ? payTypeEl.textContent : '—';
+  const payStatEl = document.querySelector('#payStatusTags .tag.selected');
+  const payStatus = payStatEl ? payStatEl.textContent : '—';
+  const instCount = document.getElementById('pay_inst').value;
+  const partial   = parseFloat(document.getElementById('pay_partial').value) || 0;
+
+  const diagObj   = selDiag ? DIAGNOSES.find(d=>d.code===selDiag) : null;
+  const diagStr   = diagObj ? `${diagObj.code} – ${diagObj.name}` : '—';
+  const teethStr  = selTeeth.size ? [...selTeeth].sort((a,b)=>a-b).join(', ') : '—';
+
+  // ---- E-Nabız formatı ----
+  const vdFmt = vdate.split('-').reverse().join('.');
+  const dobFmt = dob!=='—' ? dob.split('-').reverse().join('.') : '—';
+  let enaText = `📋 HASTA BİLGİ FORMU
+━━━━━━━━━━━━━━━━━━━━━━━━━
+Tarih       : ${vdFmt}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+Ad Soyad    : ${name}
+T.C. No     : ${tc}
+Doğum Tar.  : ${dobFmt}
+Cinsiyet    : ${gender}
+Telefon     : ${phone}
+━━━━━━━━━━━━━━━━━━━━━━━━━
+Şikayet     : ${compl}
+Teşhis      : ${diagStr}
+Diş No      : ${teethStr}
+İşlem       : ${selProc || '—'}
+${note ? 'Not         : '+note+'\n' : ''}━━━━━━━━━━━━━━━━━━━━━━━━━
+Ücret       : ${amount.toLocaleString('tr-TR')} ₺${discount>0 ? '\nİndirim     : -'+discount.toLocaleString('tr-TR')+' ₺\nNet         : '+net.toLocaleString('tr-TR')+' ₺':''}
+Ödeme       : ${payType}${payType==='Taksit'?' ('+instCount+' taksit)':''}
+Durum       : ${payStatus}${payStatus==='Kısmi Ödeme'?' | Ödenen: '+partial.toLocaleString('tr-TR')+' ₺':''}`;
+
+  document.getElementById('enaOut').textContent = enaText;
+
+  // ---- JSON (klinik app formatı) ----
+  const rec = {
+    id: 'TWA_' + Date.now(),
+    source: 'telegram_web_app',
+    patient: { name, tc, dob, phone, gender },
+    visit: {
+      date: vdate,
+      complaint: compl,
+      teeth: [...selTeeth].sort((a,b)=>a-b),
+      diagnosis: diagObj || null,
+      procedure: selProc || null,
+      note,
+    },
+    payment: {
+      amount, discount, net,
+      type: payType,
+      status: payStatus,
+      installments: payType==='Taksit' ? parseInt(instCount) : null,
+      partialPaid: payStatus==='Kısmi Ödeme' ? partial : null,
+    }
+  };
+
+  document.getElementById('jsonOut').textContent = JSON.stringify(rec, null, 2);
+}
+
+// ============ COPY ============
+function copyText(id) {
+  const txt = document.getElementById(id).textContent;
+  if(txt==='—') return;
+  navigator.clipboard.writeText(txt).then(()=>toast('Kopyalandı ✓')).catch(()=>{
+    // fallback
+    const ta = document.createElement('textarea');
+    ta.value = txt; document.body.appendChild(ta);
+    ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); toast('Kopyalandı ✓');
+  });
+}
+
+function toast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'), 2000);
+}
+
+// ============ IMPORT to clinic app ============
+function importToClinic() {
+  generate();
+  const jsonStr = document.getElementById('jsonOut').textContent;
+  if(jsonStr==='—') { toast('Önce veri girin'); return; }
+  try {
+    const rec = JSON.parse(jsonStr);
+    // Klinik uygulamasının kullandığı key
+    const existing = JSON.parse(localStorage.getItem('klinik_patients') || '[]');
+    // Aynı id varsa güncelle, yoksa ekle
+    const idx = existing.findIndex(r=>r.id===rec.id);
+    if(idx>=0) existing[idx]=rec; else existing.push(rec);
+    localStorage.setItem('klinik_patients', JSON.stringify(existing));
+    toast('Klinik uygulamasına aktarıldı ✓');
+  } catch(e) { toast('Hata: '+e.message); }
+}
+
+// ============ CLEAR ============
+function clearAll() {
+  ['p_name','p_tc','p_phone','v_complaint','t_note','pay_amount','pay_discount','pay_partial']
+    .forEach(id=>document.getElementById(id).value='');
+  document.getElementById('p_dob').value='';
+  document.getElementById('p_gender').value='';
+  document.getElementById('v_date').value=new Date().toISOString().split('T')[0];
+  selTeeth.clear();
+  selProc=null; selDiag=null;
+  document.querySelectorAll('.tooth.selected').forEach(t=>t.classList.remove('selected'));
+  document.getElementById('toothDisplay').textContent='Diş seçilmedi';
+  document.querySelectorAll('#payTypeTags .tag').forEach(t=>t.classList.remove('selected'));
+  document.querySelectorAll('#payStatusTags .tag').forEach((t,i)=>t.classList.toggle('selected',i===0));
+  buildProcList(); buildDiagList();
+  document.getElementById('enaOut').textContent='—';
+  document.getElementById('jsonOut').textContent='—';
+  document.getElementById('installCard').style.display='none';
+  document.getElementById('partialCard').style.display='none';
+  toast('Temizlendi');
+}
+</script>
+</body>
+</html>
