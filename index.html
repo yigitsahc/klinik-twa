@@ -1,790 +1,2077 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>Klinik Veri Girişi</title>
-<script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-  :root {
-    --bg: #0f1117;
-    --surface: #1a1d27;
-    --surface2: #222535;
-    --border: #2e3248;
-    --accent: #4e7cff;
-    --accent2: #00c9a7;
-    --warn: #ff7043;
-    --text: #e8eaf6;
-    --text2: #8b90b8;
-    --text3: #5a6080;
-    --red: #ff5252;
-    --radius: 12px;
-    --font: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-
-  body {
-    font-family: var(--font);
-    background: var(--bg);
-    color: var(--text);
-    min-height: 100vh;
-    padding-bottom: 100px;
-  }
-
-  /* ---- Header ---- */
-  .header {
-    position: sticky; top: 0; z-index: 100;
-    background: var(--bg);
-    border-bottom: 1px solid var(--border);
-    padding: 14px 16px 10px;
-    display: flex; align-items: center; gap: 12px;
-  }
-  .header-icon {
-    width: 36px; height: 36px; border-radius: 10px;
-    background: linear-gradient(135deg, var(--accent), var(--accent2));
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; flex-shrink: 0;
-  }
-  .header h1 { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
-  .header p { font-size: 12px; color: var(--text2); margin-top: 1px; }
-
-  /* ---- Tab bar ---- */
-  .tabs {
-    display: flex; gap: 6px;
-    padding: 12px 16px 0;
-    overflow-x: auto; scrollbar-width: none;
-  }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    flex-shrink: 0;
-    padding: 7px 14px;
-    border-radius: 20px;
-    font-size: 13px; font-weight: 500;
-    border: 1px solid var(--border);
-    background: transparent;
-    color: var(--text2);
-    cursor: pointer;
-    transition: all .2s;
-  }
-  .tab.active {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-
-  /* ---- Section ---- */
-  .section { display: none; padding: 16px; }
-  .section.active { display: block; }
-
-  /* ---- Card ---- */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-    margin-bottom: 12px;
-  }
-  .card-header {
-    padding: 12px 14px 8px;
-    font-size: 11px; font-weight: 600;
-    color: var(--text3);
-    text-transform: uppercase; letter-spacing: 0.8px;
-    border-bottom: 1px solid var(--border);
-  }
-  .card-body { padding: 4px 0; }
-
-  /* ---- Form rows ---- */
-  .row {
-    display: flex; align-items: center;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-    gap: 10px;
-  }
-  .row:last-child { border-bottom: none; }
-  .row label {
-    font-size: 13px; color: var(--text2);
-    min-width: 108px; flex-shrink: 0;
-  }
-  .row input, .row select, .row textarea {
-    flex: 1;
-    background: transparent;
-    border: none; outline: none;
-    font-family: var(--font);
-    font-size: 14px;
-    color: var(--text);
-    text-align: right;
-  }
-  .row select option { background: #1a1d27; }
-  .row textarea {
-    resize: none; text-align: left;
-    padding: 4px 0; min-height: 60px;
-    line-height: 1.5;
-  }
-  .row input::placeholder, .row textarea::placeholder { color: var(--text3); }
-  input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(0.5); }
-
-  /* ---- Diş seçici ---- */
-  .tooth-grid {
-    padding: 12px 14px;
-    display: grid; grid-template-columns: repeat(16, 1fr);
-    gap: 3px;
-  }
-  .tooth-grid-labels {
-    display: grid; grid-template-columns: 1fr 1fr;
-    padding: 0 14px 4px;
-    font-size: 10px; color: var(--text3);
-  }
-  .tooth-grid-labels span:last-child { text-align: right; }
-  .tooth {
-    aspect-ratio: 1;
-    border-radius: 4px;
-    border: 1px solid var(--border);
-    background: var(--surface2);
-    font-size: 9px; color: var(--text3);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: all .15s;
-    font-weight: 500;
-  }
-  .tooth.selected {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
-  .tooth-separator {
-    grid-column: span 16;
-    height: 1px; background: var(--border);
-    margin: 3px 0;
-  }
-  .tooth-display {
-    padding: 6px 14px 10px;
-    font-size: 12px; color: var(--text2);
-    min-height: 28px;
-  }
-
-  /* ---- İşlem listesi ---- */
-  .proc-list { padding: 4px 0; }
-  .proc-item {
-    padding: 9px 14px;
-    font-size: 13px; color: var(--text);
-    display: flex; align-items: center; gap: 8px;
-    cursor: pointer; transition: background .15s;
-    border-bottom: 1px solid var(--border);
-  }
-  .proc-item:last-child { border-bottom: none; }
-  .proc-item:active { background: var(--surface2); }
-  .proc-dot {
-    width: 8px; height: 8px; border-radius: 50%;
-    background: var(--border); flex-shrink: 0;
-    transition: background .15s;
-  }
-  .proc-item.selected .proc-dot { background: var(--accent2); }
-  .proc-item.selected { color: var(--accent2); }
-  .proc-search {
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
-  }
-  .proc-search input {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 12px;
-    font-size: 13px; color: var(--text);
-    font-family: var(--font);
-    outline: none;
-  }
-
-  /* ---- Teşhis ---- */
-  .diag-search { padding: 10px 14px; border-bottom: 1px solid var(--border); }
-  .diag-search input {
-    width: 100%; background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 12px;
-    font-size: 13px; color: var(--text);
-    font-family: var(--font); outline: none;
-  }
-  .diag-item {
-    padding: 9px 14px;
-    border-bottom: 1px solid var(--border);
-    cursor: pointer; transition: background .15s;
-  }
-  .diag-item:last-child { border-bottom: none; }
-  .diag-item:active { background: var(--surface2); }
-  .diag-code { font-size: 12px; color: var(--accent); font-weight: 600; }
-  .diag-name { font-size: 13px; color: var(--text); margin-top: 1px; }
-  .diag-item.selected { background: rgba(78,124,255,0.1); }
-  .diag-item.selected .diag-code { color: var(--accent2); }
-
-  /* ---- Pill tags ---- */
-  .tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 10px 14px; }
-  .tag {
-    padding: 4px 10px; border-radius: 20px;
-    font-size: 12px; font-weight: 500;
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text2); cursor: pointer; transition: all .15s;
-  }
-  .tag.selected { background: rgba(0,201,167,0.15); border-color: var(--accent2); color: var(--accent2); }
-
-  /* ---- Çıktı alanı ---- */
-  .output-box {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 14px;
-    margin-bottom: 12px;
-    position: relative;
-  }
-  .output-label {
-    font-size: 11px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.8px; color: var(--text3);
-    margin-bottom: 10px;
-    display: flex; justify-content: space-between; align-items: center;
-  }
-  .copy-btn {
-    background: var(--accent);
-    border: none; border-radius: 6px;
-    padding: 4px 10px; font-size: 11px; font-weight: 600;
-    color: #fff; cursor: pointer; transition: opacity .15s;
-    font-family: var(--font);
-  }
-  .copy-btn:active { opacity: 0.7; }
-  .output-text {
-    font-size: 12px; color: var(--text);
-    line-height: 1.7; white-space: pre-wrap;
-    font-family: 'SF Mono', 'Fira Code', monospace;
-  }
-
-  /* ---- Action button ---- */
-  .action-bar {
-    position: fixed; bottom: 0; left: 0; right: 0;
-    padding: 12px 16px;
-    background: var(--bg);
-    border-top: 1px solid var(--border);
-    display: flex; gap: 8px;
-  }
-  .btn-primary {
-    flex: 1; padding: 14px;
-    background: linear-gradient(135deg, var(--accent), #6c5ce7);
-    border: none; border-radius: var(--radius);
-    font-size: 15px; font-weight: 600;
-    color: #fff; cursor: pointer;
-    font-family: var(--font);
-    transition: opacity .15s;
-  }
-  .btn-primary:active { opacity: 0.85; }
-  .btn-secondary {
-    padding: 14px 18px;
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    font-size: 14px; font-weight: 500;
-    color: var(--text2); cursor: pointer;
-    font-family: var(--font);
-  }
-
-  /* ---- Toast ---- */
-  .toast {
-    position: fixed; top: 70px; left: 50%; transform: translateX(-50%);
-    background: var(--accent2); color: #fff;
-    padding: 10px 20px; border-radius: 20px;
-    font-size: 13px; font-weight: 600;
-    opacity: 0; transition: opacity .3s;
-    pointer-events: none; z-index: 999;
-    white-space: nowrap;
-  }
-  .toast.show { opacity: 1; }
-
-  .section-title {
-    font-size: 13px; font-weight: 600;
-    color: var(--text2); padding: 0 0 8px;
-    letter-spacing: -0.2px;
-  }
-
-  /* Chevron for select */
-  .row select { appearance: none; -webkit-appearance: none; }
-
-  input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Diş Kliniği">
+    <title>Diş Kliniği Ödeme Takibi</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 12px;
+            padding-top: max(12px, env(safe-area-inset-top));
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+        }
+        
+        /* Şifre Ekranı */
+        .login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: white;
+            padding: 35px 25px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 360px;
+            width: 100%;
+        }
+        
+        .login-box h1 {
+            color: #667eea;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .login-box p {
+            color: #666;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        
+        .login-box input[type="password"] {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 22px;
+            text-align: center;
+            letter-spacing: 8px;
+            margin-bottom: 18px;
+        }
+        
+        .login-box input[type="password"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-box button {
+            width: 100%;
+            padding: 14px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        
+        .login-box button:active {
+            background: #5568d3;
+        }
+        
+        .login-error {
+            color: #ef4444;
+            margin-top: 15px;
+            font-weight: 600;
+            display: none;
+        }
+        
+        .app-container {
+            display: none;
+        }
+        
+        .app-container.visible {
+            display: block;
+        }
+        
+        .login-overlay.hidden {
+            display: none;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 12px;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 11px;
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .logout-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 11px;
+            white-space: nowrap;
+        }
+        
+        .tabs {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            margin-bottom: 12px;
+            display: flex;
+        }
+        
+        .tab {
+            flex: 1;
+            padding: 12px 6px;
+            border: none;
+            background: white;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            color: #666;
+            border-bottom: 3px solid transparent;
+            border-radius: 15px 15px 0 0;
+            text-align: center;
+        }
+        
+        .tab:active {
+            background: #f8f9ff;
+        }
+        
+        .tab.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: #f8f9ff;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            padding: 15px;
+            min-height: auto;
+        }
+        
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group {
+            margin-bottom: 0;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+            font-size: 13px;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            -webkit-appearance: none;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+        }
+        
+        .btn:active {
+            opacity: 0.8;
+        }
+        
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-warning {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .btn-warning:hover {
+            background: #d97706;
+        }
+        
+        .btn-danger {
+            background: #ef4444;
+            color: white;
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+        
+        /* Mobil Kart Görünümü */
+        .mobile-cards {
+            display: block;
+        }
+        
+        /* Dosya numarası olmayanlar listesi - her zaman görünür */
+        .no-file-list {
+            display: block;
+        }
+        
+        .no-file-list .mobile-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 4px solid #f59e0b;
+        }
+        
+        .mobile-card {
+            background: #f8f9ff;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .mobile-card.expense {
+            border-left-color: #ef4444;
+        }
+        
+        .mobile-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .mobile-card-title {
+            font-weight: 600;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .mobile-card-subtitle {
+            color: #666;
+            font-size: 11px;
+            margin-top: 2px;
+        }
+        
+        .mobile-card-amount {
+            font-weight: bold;
+            font-size: 15px;
+        }
+        
+        .mobile-card-amount.income {
+            color: #10b981;
+        }
+        
+        .mobile-card-amount.expense {
+            color: #ef4444;
+        }
+        
+        .mobile-card-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+            font-size: 11px;
+        }
+        
+        .mobile-card-detail {
+            background: white;
+            padding: 3px 8px;
+            border-radius: 6px;
+            color: #666;
+        }
+        
+        .mobile-card-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+        
+        .mobile-card-actions .btn {
+            padding: 8px 14px;
+            font-size: 12px;
+            width: auto;
+        }
+        
+        /* Hasta Kartları */
+        .patient-card {
+            background: white;
+            border-radius: 12px;
+            padding: 12px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            border-left: 4px solid #667eea;
+        }
+        
+        .patient-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 10px;
+        }
+        
+        .patient-card-name {
+            font-weight: 600;
+            color: #667eea;
+            font-size: 15px;
+        }
+        
+        .patient-card-file {
+            color: #666;
+            font-size: 12px;
+            margin-top: 2px;
+        }
+        
+        .patient-card-total {
+            font-weight: bold;
+            color: #10b981;
+            font-size: 15px;
+            text-align: right;
+        }
+        
+        .patient-card-date {
+            color: #999;
+            font-size: 10px;
+            text-align: right;
+        }
+        
+        .patient-card-actions {
+            display: flex;
+            gap: 6px;
+        }
+        
+        .patient-card-actions .btn {
+            flex: 1;
+            text-align: center;
+            padding: 10px 8px;
+            font-size: 11px;
+            width: auto;
+        }
+        
+        /* Tablo gizle mobilde */
+        .desktop-table {
+            display: none;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            font-size: 12px;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 10px 6px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 10px;
+        }
+        
+        td {
+            padding: 8px 6px;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 11px;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-card {
+            padding: 15px;
+            border-radius: 12px;
+            color: white;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card h3 {
+            font-size: 11px;
+            margin-bottom: 5px;
+            opacity: 0.9;
+        }
+        
+        .stat-card p {
+            font-size: 22px;
+            font-weight: bold;
+        }
+        
+        .stat-green {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .stat-red {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .stat-blue {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        }
+        
+        .stat-purple {
+            background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+        }
+        
+        .search-box {
+            margin-bottom: 12px;
+        }
+        
+        .search-box input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+        
+        .patient-detail {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+        }
+        
+        .patient-detail h2 {
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
+        
+        .back-btn {
+            background: white;
+            color: #667eea;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 12px;
+            font-size: 14px;
+            width: 100%;
+        }
+        
+        .suggestions {
+            position: absolute;
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            margin-top: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .suggestion-item {
+            padding: 14px;
+            cursor: pointer;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .suggestion-item:hover {
+            background: #f8f9ff;
+        }
+        
+        .suggestion-item strong {
+            display: block;
+            color: #333;
+            font-size: 14px;
+        }
+        
+        .suggestion-item small {
+            color: #666;
+            font-size: 12px;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 15px;
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+        
+        .filters select {
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 13px;
+            flex: 1;
+        }
+        
+        .hidden {
+            display: none !important;
+        }
+        
+        h2 {
+            font-size: 16px;
+            margin-bottom: 12px;
+            color: #333;
+        }
+        
+        .info-box {
+            background: #fff4e6;
+            border-left: 4px solid #f59e0b;
+            padding: 12px;
+            margin-top: 15px;
+            border-radius: 10px;
+        }
+        
+        .info-box strong {
+            color: #92400e;
+            font-size: 13px;
+        }
+        
+        .info-box p {
+            color: #78350f;
+            font-size: 11px;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+        
+        .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .button-group .btn {
+            width: 100%;
+        }
+        
+        /* Desktop için ayarlar */
+        @media (min-width: 768px) {
+            body {
+                padding: 30px;
+            }
+            
+            .header {
+                padding: 30px 40px;
+                border-radius: 20px;
+                margin-bottom: 25px;
+            }
+            
+            .header h1 {
+                font-size: 36px;
+            }
+            
+            .header p {
+                font-size: 16px;
+            }
+            
+            .tabs {
+                border-radius: 20px;
+                margin-bottom: 25px;
+            }
+            
+            .tab {
+                padding: 20px;
+                font-size: 18px;
+            }
+            
+            .content {
+                padding: 40px;
+                border-radius: 20px;
+            }
+            
+            .form-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 20px;
+            }
+            
+            .btn {
+                width: auto;
+                padding: 14px 35px;
+                font-size: 17px;
+            }
+            
+            .stats {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 25px;
+            }
+            
+            .stat-card {
+                padding: 30px;
+            }
+            
+            .stat-card h3 {
+                font-size: 15px;
+            }
+            
+            .stat-card p {
+                font-size: 36px;
+            }
+            
+            h2 {
+                font-size: 24px;
+            }
+            
+            .search-box input {
+                width: 400px;
+            }
+            
+            .mobile-cards {
+                display: none;
+            }
+            
+            .desktop-table {
+                display: block;
+            }
+            
+            table {
+                font-size: 15px;
+            }
+            
+            th {
+                padding: 16px;
+                font-size: 15px;
+            }
+            
+            td {
+                padding: 14px 16px;
+            }
+            
+            .badge {
+                padding: 6px 14px;
+                font-size: 13px;
+            }
+            
+            .filters {
+                gap: 15px;
+            }
+            
+            .filters select {
+                flex: none;
+                width: auto;
+            }
+            
+            .button-group {
+                flex-direction: row;
+            }
+            
+            .button-group .btn {
+                width: auto;
+            }
+            
+            .back-btn {
+                width: auto;
+            }
+            
+            .patient-detail {
+                padding: 30px;
+            }
+            
+            .patient-detail h2 {
+                font-size: 32px;
+            }
+        }
+    </style>
 </head>
 <body>
-
-<div class="header">
-  <div class="header-icon">🦷</div>
-  <div>
-    <h1>Klinik Veri Girişi</h1>
-    <p>Merzifon Diş Kliniği</p>
-  </div>
-</div>
-
-<div class="tabs">
-  <button class="tab active" onclick="switchTab(0)">👤 Hasta</button>
-  <button class="tab" onclick="switchTab(1)">🦷 Tedavi</button>
-  <button class="tab" onclick="switchTab(2)">💳 Ödeme</button>
-  <button class="tab" onclick="switchTab(3)">📋 Çıktı</button>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<!-- ===================== TAB 0: HASTA ===================== -->
-<div class="section active" id="tab0">
-  <div class="card">
-    <div class="card-header">Hasta Bilgileri</div>
-    <div class="card-body">
-      <div class="row">
-        <label>Ad Soyad</label>
-        <input type="text" id="p_name" placeholder="Ali Vural" autocomplete="off">
-      </div>
-      <div class="row">
-        <label>T.C. Kimlik</label>
-        <input type="tel" id="p_tc" placeholder="12345678901" maxlength="11">
-      </div>
-      <div class="row">
-        <label>Doğum Tarihi</label>
-        <input type="date" id="p_dob">
-      </div>
-      <div class="row">
-        <label>Telefon</label>
-        <input type="tel" id="p_phone" placeholder="05xx xxx xx xx">
-      </div>
-      <div class="row">
-        <label>Cinsiyet</label>
-        <select id="p_gender">
-          <option value="">Seçin</option>
-          <option value="E">Erkek</option>
-          <option value="K">Kadın</option>
-        </select>
-      </div>
+    <!-- Şifre Ekranı -->
+    <div id="login-overlay" class="login-overlay">
+        <div class="login-box">
+            <h1>🦷 Diş Kliniği</h1>
+            <p>Devam etmek için şifrenizi girin</p>
+            <input type="password" id="password-input" inputmode="numeric" placeholder="••••" maxlength="10" onkeypress="if(event.key==='Enter') checkPassword()">
+            <button onclick="checkPassword()">Giriş Yap</button>
+            <p id="login-error" class="login-error">❌ Yanlış şifre!</p>
+        </div>
     </div>
-  </div>
 
-  <div class="card">
-    <div class="card-header">Ziyaret</div>
-    <div class="card-body">
-      <div class="row">
-        <label>Tarih</label>
-        <input type="date" id="v_date" value="">
-      </div>
-      <div class="row">
-        <label>Şikayet</label>
-        <textarea id="v_complaint" placeholder="Hastanın şikayeti..."></textarea>
-      </div>
+    <!-- Ana Uygulama -->
+    <div id="app-container" class="app-container">
+        <div class="container">
+            <div class="header">
+                <div class="header-content">
+                    <div>
+                        <h1>🦷 Diş Kliniği</h1>
+                        <p>Ödeme Takip Sistemi</p>
+                    </div>
+                    <button class="logout-btn" onclick="logout()">🚪 Çıkış</button>
+                </div>
+            </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="showTab('odemeler')">💰 Ödemeler</button>
+            <button class="tab" onclick="showTab('hastalar')">👥 Hastalar</button>
+            <button class="tab" onclick="showTab('raporlar')">📊 Raporlar</button>
+        </div>
+
+        <div id="odemeler-tab" class="content">
+            <h2>Yeni Kayıt Ekle</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label>Tür *</label>
+                    <select id="type" onchange="togglePatientFields()">
+                        <option value="gelir">Ödeme (Gelir)</option>
+                        <option value="gider">Gider</option>
+                    </select>
+                </div>
+                <div class="form-group" id="patient-name-group">
+                    <label>Hasta Adı *</label>
+                    <div style="position: relative;">
+                        <input type="text" id="patientName" oninput="showPatientSuggestions()" placeholder="Hasta adı giriniz" autocomplete="off">
+                        <div id="suggestions" class="suggestions hidden"></div>
+                    </div>
+                </div>
+                <div class="form-group" id="patient-file-group">
+                    <label>Dosya Numarası</label>
+                    <input type="text" id="patientFileNo" placeholder="Dosya numarası">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-top: 8px; font-weight: normal; font-size: 12px; color: #666;">
+                        <input type="checkbox" id="noFileNo" onchange="toggleFileNoInput()" style="width: auto; padding: 0;">
+                        Dosya numarası yok
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label>Tutar (₺) *</label>
+                    <input type="number" id="amount" placeholder="0.00" step="0.01">
+                </div>
+                <div class="form-group">
+                    <label>Ödeme Yöntemi</label>
+                    <select id="paymentMethod">
+                        <option value="nakit">Nakit</option>
+                        <option value="kredi-kartı">Kredi Kartı</option>
+                        <option value="banka-kartı">Banka Kartı</option>
+                        <option value="havale-eft">Havale/EFT</option>
+                        <option value="firma">Firma</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Tarih</label>
+                    <input type="date" id="date">
+                </div>
+                <div class="form-group" style="grid-column: span 3;">
+                    <label>Not (İsteğe bağlı)</label>
+                    <input type="text" id="description" placeholder="Ek bilgi girebilirsiniz">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="addTransaction()">➕ Kaydet</button>
+
+            <h2 style="margin-top: 40px;">Ödeme Geçmişi</h2>
+            <div class="filters">
+                <select id="filterYear" onchange="loadTransactions()">
+                    <option value="all">Tüm Yıllar</option>
+                </select>
+                <select id="filterMonth" onchange="loadTransactions()">
+                    <option value="all">Tüm Aylar</option>
+                    <option value="1">Ocak</option>
+                    <option value="2">Şubat</option>
+                    <option value="3">Mart</option>
+                    <option value="4">Nisan</option>
+                    <option value="5">Mayıs</option>
+                    <option value="6">Haziran</option>
+                    <option value="7">Temmuz</option>
+                    <option value="8">Ağustos</option>
+                    <option value="9">Eylül</option>
+                    <option value="10">Ekim</option>
+                    <option value="11">Kasım</option>
+                    <option value="12">Aralık</option>
+                </select>
+            </div>
+            <div id="transactions-list"></div>
+        </div>
+
+        <div id="hastalar-tab" class="content hidden">
+            <div id="patient-list-view">
+                <!-- Tab butonları -->
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button id="tab-all-patients" class="btn btn-primary" onclick="showPatientTab('all')" style="flex: 1;">📁 Tüm Hastalar</button>
+                    <button id="tab-no-file" class="btn" onclick="showPatientTab('nofile')" style="flex: 1; background: #e0e0e0; color: #333;">⏳ Dosya No Olmayanlar</button>
+                </div>
+                
+                <div id="all-patients-section">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                        <h2 style="margin: 0;">Hasta Listesi (<span id="patient-count">0</span>)</h2>
+                        <div class="search-box">
+                            <input type="text" id="patientSearch" oninput="loadPatients()" placeholder="🔍 Hasta ara">
+                        </div>
+                    </div>
+                    <div id="patients-list"></div>
+                </div>
+                
+                <div id="no-file-patients-section" class="hidden">
+                    <div style="margin-bottom: 15px;">
+                        <h2 style="margin: 0;">⏳ Dosya Numarası Olmayanlar (<span id="no-file-count">0</span>)</h2>
+                        <p style="color: #666; font-size: 12px; margin-top: 5px;">Bu hastalar için henüz dosya numarası atanmamış</p>
+                    </div>
+                    <div id="no-file-patients-list"></div>
+                </div>
+            </div>
+            
+            <div id="patient-detail-view" class="hidden">
+                <button class="back-btn" onclick="backToPatientList()">← Hasta Listesine Dön</button>
+                <div id="patient-detail"></div>
+            </div>
+        </div>
+
+        <div id="raporlar-tab" class="content hidden">
+            <h2>Finansal Raporlar</h2>
+            <button id="toggle-stats-btn" class="btn btn-primary" onclick="toggleStats()" style="margin-bottom: 20px;">
+                👁️ Göster
+            </button>
+            <div id="stats" class="stats" style="display: none;"></div>
+            
+            <h2 style="margin-top: 40px;">Aylık Analiz</h2>
+            <div id="monthly-analysis"></div>
+            
+            <h2 style="margin-top: 40px;">Rapor İşlemleri</h2>
+            <div class="button-group">
+                <button class="btn btn-success" onclick="exportToExcel()">📥 Excel Raporu İndir</button>
+            </div>
+            
+            <h2 style="margin-top: 40px;">Veri Yedekleme</h2>
+            <p style="color: #666; margin-bottom: 20px;">Verilerinizi düzenli olarak yedekleyin ve Google Drive'a kaydedin.</p>
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="downloadBackup()">💾 Yedeği İndir</button>
+                <button class="btn btn-warning" onclick="document.getElementById('restoreFile').click()">📂 Yedeği Geri Yükle</button>
+            </div>
+            <input type="file" id="restoreFile" accept=".json" style="display: none;" onchange="restoreBackup(this)">
+            
+            <div class="info-box">
+                <strong>💡 Yedekleme Nasıl Çalışır?</strong>
+                <p>
+                    <strong>Yedekleme:</strong> "Yedeği İndir" butonuna basın. İndirilen JSON dosyasını Google Drive veya bilgisayarınızda güvenli bir yere kaydedin.<br><br>
+                    <strong>Geri Yükleme:</strong> "Yedeği Geri Yükle" butonuna basın ve daha önce kaydettiğiniz yedek dosyasını seçin. Tüm verileriniz geri gelecektir.<br><br>
+                    <strong>Öneri:</strong> Her hafta düzenli yedek alın. Böylece verileriniz her zaman güvende olur.
+                </p>
+            </div>
+        </div>
+        </div>
     </div>
-  </div>
-</div>
 
-<!-- ===================== TAB 1: TEDAVİ ===================== -->
-<div class="section" id="tab1">
+    <script>
+        // ŞİFRE AYARLARI - Buradan değiştirebilirsiniz
+        const APP_PASSWORD = '1995';  // Şifreyi buradan değiştirin
+        
+        // Şifre kontrolü
+        function checkPassword() {
+            const input = document.getElementById('password-input').value;
+            const errorEl = document.getElementById('login-error');
+            
+            if (input === APP_PASSWORD) {
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app-container').classList.add('visible');
+                sessionStorage.setItem('authenticated', 'true');
+                initApp();
+            } else {
+                errorEl.style.display = 'block';
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+                setTimeout(() => { errorEl.style.display = 'none'; }, 2000);
+            }
+        }
+        
+        // Çıkış yapma
+        function logout() {
+            if (confirm('Çıkış yapmak istediğinize emin misiniz?')) {
+                sessionStorage.removeItem('authenticated');
+                document.getElementById('login-overlay').classList.remove('hidden');
+                document.getElementById('app-container').classList.remove('visible');
+                document.getElementById('password-input').value = '';
+                document.getElementById('password-input').focus();
+            }
+        }
+        
+        // Sayfa yüklendiğinde oturum kontrolü
+        window.onload = function() {
+            // Telegram WebApp içinden açılıyorsa şifre ekranını atla
+            if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initData) {
+                Telegram.WebApp.ready();
+                Telegram.WebApp.expand();
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app-container').classList.add('visible');
+                sessionStorage.setItem('authenticated', 'true');
+                initApp();
+                return;
+            }
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                document.getElementById('login-overlay').classList.add('hidden');
+                document.getElementById('app-container').classList.add('visible');
+                initApp();
+            } else {
+                document.getElementById('password-input').focus();
+            }
+        };
+        
+        // Uygulama başlatma
+        function initApp() {
+            document.getElementById('date').valueAsDate = new Date();
+            updateYearFilter();
+            loadTransactions();
+            loadPatients();
+            loadNoFilePatients();
+        }
+        
+        let transactions = JSON.parse(localStorage.getItem('transactions') || '[]');
+        let patients = JSON.parse(localStorage.getItem('patients') || '[]');
+        let selectedPatient = null;
+        let sortColumn = null;
+        let sortDirection = 'desc';
+        let statsVisible = false;
 
-  <div class="card">
-    <div class="card-header">Diş Seçimi</div>
-    <div class="tooth-grid-labels">
-      <span>Üst Sağ →</span>
-      <span>← Üst Sol</span>
-    </div>
-    <div class="tooth-grid" id="toothGrid"></div>
-    <div class="tooth-display" id="toothDisplay">Diş seçilmedi</div>
-  </div>
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('#patientName') && !e.target.closest('#suggestions')) {
+                document.getElementById('suggestions').classList.add('hidden');
+            }
+        });
 
-  <div class="card">
-    <div class="card-header">Teşhis (ICD-10)</div>
-    <div class="diag-search">
-      <input type="text" id="diagSearch" placeholder="Teşhis ara... (ör: çürük, pulpit)" oninput="filterDiag()">
-    </div>
-    <div class="proc-list" id="diagList"></div>
-  </div>
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.content').forEach(c => c.classList.add('hidden'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + '-tab').classList.remove('hidden');
+            
+            if (tab === 'raporlar') loadStats();
+            if (tab === 'hastalar') backToPatientList();
+        }
 
-  <div class="card">
-    <div class="card-header">Yapılan İşlem</div>
-    <div class="proc-search">
-      <input type="text" id="procSearch" placeholder="İşlem ara... (ör: dolgu, implant)" oninput="filterProcs()">
-    </div>
-    <div class="proc-list" id="procList"></div>
-  </div>
+        function togglePatientFields() {
+            const type = document.getElementById('type').value;
+            const show = type === 'gelir';
+            document.getElementById('patient-name-group').classList.toggle('hidden', !show);
+            document.getElementById('patient-file-group').classList.toggle('hidden', !show);
+        }
 
-  <div class="card">
-    <div class="card-header">Not</div>
-    <div class="card-body">
-      <div class="row">
-        <textarea id="t_note" placeholder="Klinik not, malzeme, özel durum..."></textarea>
-      </div>
-    </div>
-  </div>
-</div>
+        function showPatientSuggestions() {
+            const input = document.getElementById('patientName').value.toLowerCase();
+            const suggestionsDiv = document.getElementById('suggestions');
+            
+            if (input.length === 0) {
+                suggestionsDiv.classList.add('hidden');
+                return;
+            }
+            
+            const filtered = patients.filter(p => p.name.toLowerCase().includes(input));
+            
+            if (filtered.length === 0) {
+                suggestionsDiv.classList.add('hidden');
+                return;
+            }
+            
+            suggestionsDiv.innerHTML = filtered.map(p => `
+                <div class="suggestion-item" onclick="selectPatient(${p.id})">
+                    <strong>${p.name}</strong>
+                    <small>Dosya No: ${p.fileNo}</small>
+                </div>
+            `).join('');
+            
+            suggestionsDiv.classList.remove('hidden');
+        }
 
-<!-- ===================== TAB 2: ÖDEME ===================== -->
-<div class="section" id="tab2">
-  <div class="card">
-    <div class="card-header">Ücret</div>
-    <div class="card-body">
-      <div class="row">
-        <label>Tutar (₺)</label>
-        <input type="number" id="pay_amount" placeholder="0">
-      </div>
-      <div class="row">
-        <label>İndirim (₺)</label>
-        <input type="number" id="pay_discount" placeholder="0">
-      </div>
-    </div>
-  </div>
+        function selectPatient(id) {
+            const patient = patients.find(p => p.id === id);
+            if (patient) {
+                document.getElementById('patientName').value = patient.name;
+                document.getElementById('patientFileNo').value = patient.fileNo;
+                document.getElementById('suggestions').classList.add('hidden');
+                document.getElementById('amount').focus();
+            }
+        }
 
-  <div class="card">
-    <div class="card-header">Ödeme Türü</div>
-    <div class="tags" id="payTypeTags">
-      <span class="tag" onclick="selTag(this,'payType')">Nakit</span>
-      <span class="tag" onclick="selTag(this,'payType')">Kredi Kartı</span>
-      <span class="tag" onclick="selTag(this,'payType')">Banka Kartı</span>
-      <span class="tag" onclick="selTag(this,'payType')">Havale/EFT</span>
-      <span class="tag" onclick="selTag(this,'payType')">SGK</span>
-      <span class="tag" onclick="selTag(this,'payType')">Taksit</span>
-    </div>
-  </div>
+        function toggleFileNoInput() {
+            const checkbox = document.getElementById('noFileNo');
+            const fileNoInput = document.getElementById('patientFileNo');
+            
+            if (checkbox.checked) {
+                fileNoInput.value = '';
+                fileNoInput.disabled = true;
+                fileNoInput.placeholder = 'Dosya numarası yok';
+            } else {
+                fileNoInput.disabled = false;
+                fileNoInput.placeholder = 'Dosya numarası';
+            }
+        }
 
-  <div class="card" id="installCard" style="display:none">
-    <div class="card-header">Taksit</div>
-    <div class="card-body">
-      <div class="row">
-        <label>Taksit sayısı</label>
-        <select id="pay_inst">
-          <option>2</option><option>3</option><option>4</option>
-          <option>6</option><option>9</option><option>12</option>
-        </select>
-      </div>
-    </div>
-  </div>
+        function addTransaction() {
+            const type = document.getElementById('type').value;
+            const patientName = document.getElementById('patientName').value.trim();
+            const noFileNo = document.getElementById('noFileNo').checked;
+            const patientFileNo = noFileNo ? '' : document.getElementById('patientFileNo').value.trim();
+            const amount = parseFloat(document.getElementById('amount').value);
+            const paymentMethod = document.getElementById('paymentMethod').value;
+            const date = document.getElementById('date').value;
+            const description = document.getElementById('description').value.trim();
+            
+            if (!amount || amount <= 0) {
+                alert('Lütfen geçerli bir tutar girin!');
+                return;
+            }
+            
+            if (type === 'gelir' && !patientName) {
+                alert('Lütfen hasta adı girin!');
+                return;
+            }
+            
+            if (type === 'gelir' && !noFileNo && !patientFileNo) {
+                alert('Lütfen dosya numarası girin veya "Dosya numarası yok" seçeneğini işaretleyin!');
+                return;
+            }
+            
+            let patientId = null;
+            
+            if (type === 'gelir') {
+                let existingPatient = null;
+                
+                // Sadece dosya numarası varsa mevcut hastayı ara
+                if (patientFileNo) {
+                    existingPatient = patients.find(p => p.fileNo === patientFileNo);
+                }
+                // Dosya numarası yoksa HER ZAMAN yeni hasta oluştur
+                
+                if (!existingPatient) {
+                    const newPatient = {
+                        id: Date.now(),
+                        name: patientName,
+                        fileNo: patientFileNo,
+                        hasNoFileNo: noFileNo,
+                        createdAt: new Date().toISOString()
+                    };
+                    patients.push(newPatient);
+                    patientId = newPatient.id;
+                } else {
+                    // Mevcut hasta varsa adını güncelle
+                    if (existingPatient.name !== patientName) {
+                        existingPatient.name = patientName;
+                    }
+                    patientId = existingPatient.id;
+                }
+                
+                localStorage.setItem('patients', JSON.stringify(patients));
+            }
+            
+            const transaction = {
+                id: Date.now() + Math.random(), // Benzersiz ID
+                type,
+                patientName: type === 'gelir' ? patientName : null,
+                patientFileNo: type === 'gelir' ? patientFileNo : null,
+                patientId,
+                amount,
+                paymentMethod,
+                date,
+                description: description || '-'
+            };
+            
+            transactions.push(transaction);
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            
+            document.getElementById('patientName').value = '';
+            document.getElementById('patientFileNo').value = '';
+            document.getElementById('noFileNo').checked = false;
+            document.getElementById('patientFileNo').disabled = false;
+            document.getElementById('patientFileNo').placeholder = 'Dosya numarası';
+            document.getElementById('amount').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('patientName').focus();
+            
+            alert('✅ Kayıt başarıyla eklendi!');
+            updateYearFilter();
+            loadTransactions();
+            loadPatients();
+            loadNoFilePatients();
+        }
 
-  <div class="card">
-    <div class="card-header">Ödeme Durumu</div>
-    <div class="tags" id="payStatusTags">
-      <span class="tag selected" onclick="selTag(this,'payStatus')">Ödendi</span>
-      <span class="tag" onclick="selTag(this,'payStatus')">Bekliyor</span>
-      <span class="tag" onclick="selTag(this,'payStatus')">Kısmi Ödeme</span>
-    </div>
-  </div>
+        function deleteTransaction(id) {
+            if (confirm('⚠️ Bu ödeme kaydını silmek istediğinize emin misiniz?\n\nBu işlem geri alınamaz!')) {
+                transactions = transactions.filter(t => t.id !== id);
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+                loadTransactions();
+                loadStats();
+                alert('✅ Ödeme kaydı başarıyla silindi!');
+            }
+        }
 
-  <div class="card" id="partialCard" style="display:none">
-    <div class="card-header">Ödenen Miktar</div>
-    <div class="card-body">
-      <div class="row">
-        <label>Ödenen (₺)</label>
-        <input type="number" id="pay_partial" placeholder="0">
-      </div>
-    </div>
-  </div>
-</div>
+        function editTransaction(id) {
+            const t = transactions.find(tr => tr.id === id);
+            if (!t) return;
+            
+            // Tutar düzenleme
+            const newAmount = prompt('Tutar (₺):', t.amount);
+            if (newAmount === null) return;
+            
+            const parsedAmount = parseFloat(newAmount);
+            if (isNaN(parsedAmount) || parsedAmount <= 0) {
+                alert('❌ Geçerli bir tutar girin!');
+                return;
+            }
+            
+            // Not düzenleme
+            const newDescription = prompt('Not:', t.description === '-' ? '' : t.description);
+            if (newDescription === null) return;
+            
+            // Ödeme yöntemi düzenleme
+            const methods = ['nakit', 'kredi-kartı', 'banka-kartı', 'havale-eft', 'firma'];
+            const methodNames = ['Nakit', 'Kredi Kartı', 'Banka Kartı', 'Havale/EFT', 'Firma'];
+            const currentIndex = methods.indexOf(t.paymentMethod) + 1;
+            const methodPrompt = prompt(
+                'Ödeme Yöntemi:\n1. Nakit\n2. Kredi Kartı\n3. Banka Kartı\n4. Havale/EFT\n5. Firma\n\nNumara girin (1-5):', 
+                currentIndex || 1
+            );
+            if (methodPrompt === null) return;
+            
+            const methodIndex = parseInt(methodPrompt) - 1;
+            if (methodIndex < 0 || methodIndex > 4) {
+                alert('❌ Geçerli bir numara girin (1-5)!');
+                return;
+            }
+            
+            // Tarih düzenleme
+            const newDate = prompt('Tarih (YYYY-AA-GG):', t.date);
+            if (newDate === null) return;
+            
+            if (!/^\d{4}-\d{2}-\d{2}$/.test(newDate)) {
+                alert('❌ Geçerli bir tarih formatı girin (örn: 2026-01-03)!');
+                return;
+            }
+            
+            // Eğer gelir ise hasta bilgilerini de düzenle
+            if (t.type === 'gelir') {
+                const newPatientName = prompt('Hasta Adı:', t.patientName);
+                if (newPatientName === null) return;
+                
+                const newFileNo = prompt('Dosya No:', t.patientFileNo);
+                if (newFileNo === null) return;
+                
+                if (!newPatientName.trim() || !newFileNo.trim()) {
+                    alert('❌ Hasta adı ve dosya numarası boş olamaz!');
+                    return;
+                }
+                
+                t.patientName = newPatientName.trim();
+                t.patientFileNo = newFileNo.trim();
+            }
+            
+            // Güncelle
+            t.amount = parsedAmount;
+            t.description = newDescription.trim() || '-';
+            t.paymentMethod = methods[methodIndex];
+            t.date = newDate;
+            
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            loadTransactions();
+            loadStats();
+            
+            alert('✅ Kayıt başarıyla güncellendi!');
+        }
 
-<!-- ===================== TAB 3: ÇIKTI ===================== -->
-<div class="section" id="tab3">
-  <div class="output-box">
-    <div class="output-label">
-      <span>🏥 E-Nabız / MBYS</span>
-      <button class="copy-btn" onclick="copyText('enaOut')">Kopyala</button>
-    </div>
-    <div class="output-text" id="enaOut">—</div>
-  </div>
+        function deletePatient(id) {
+            const patient = patients.find(p => p.id === id);
+            if (!patient) return;
+            
+            const patientTransactions = transactions.filter(t => 
+                t.patientId === id || t.patientFileNo === patient.fileNo
+            );
+            
+            let confirmMessage = `⚠️ DİKKAT!\n\n"${patient.name}" (Dosya No: ${patient.fileNo}) adlı hastayı silmek istediğinize emin misiniz?\n\n`;
+            
+            if (patientTransactions.length > 0) {
+                confirmMessage += `Bu hastaya ait ${patientTransactions.length} adet ödeme kaydı var.\n\n`;
+                confirmMessage += `Seçenekler:\n\n`;
+                confirmMessage += `TAMAM: Sadece hasta kaydını sil (ödemeler kalacak)\n`;
+                confirmMessage += `İPTAL: Hiçbir şey silme\n\n`;
+                confirmMessage += `Not: Ödeme kayıtlarını silmek için Ödemeler sekmesinden tek tek silebilirsiniz.`;
+            }
+            
+            if (confirm(confirmMessage)) {
+                patients = patients.filter(p => p.id !== id);
+                localStorage.setItem('patients', JSON.stringify(patients));
+                loadPatients();
+                alert('✅ Hasta kaydı silindi!\n\nNot: Bu hastaya ait ödeme kayıtları hala sistemde duruyor.');
+            }
+        }
 
-  <div class="output-box">
-    <div class="output-label">
-      <span>📱 Klinik Uygulama (JSON)</span>
-      <button class="copy-btn" onclick="copyText('jsonOut')">Kopyala</button>
-    </div>
-    <div class="output-text" id="jsonOut">—</div>
-  </div>
+        function updateYearFilter() {
+            const years = [...new Set(transactions.map(t => new Date(t.date).getFullYear()))].sort().reverse();
+            const filterYear = document.getElementById('filterYear');
+            filterYear.innerHTML = '<option value="all">Tüm Yıllar</option>' + 
+                years.map(y => `<option value="${y}">${y}</option>`).join('');
+        }
 
-  <div style="margin-top:4px; margin-bottom:8px;">
-    <button class="btn-primary" style="width:100%;display:block" onclick="importToClinic()">
-      📲 Klinik Uygulamasına Aktar
-    </button>
-  </div>
-  <p style="font-size:11px;color:var(--text3);text-align:center;padding-bottom:8px;">
-    Klinik uygulaması aynı cihazda açıksa localStorage'a yazar
-  </p>
-</div>
+        function getFilteredTransactions() {
+            const filterYear = document.getElementById('filterYear').value;
+            const filterMonth = document.getElementById('filterMonth').value;
+            
+            return transactions.filter(t => {
+                const tDate = new Date(t.date);
+                const tYear = tDate.getFullYear().toString();
+                const tMonth = (tDate.getMonth() + 1).toString();
+                
+                if (filterYear !== 'all' && tYear !== filterYear) return false;
+                if (filterMonth !== 'all' && tMonth !== filterMonth) return false;
+                return true;
+            });
+        }
 
-<div class="action-bar">
-  <button class="btn-secondary" onclick="clearAll()">↺</button>
-  <button class="btn-primary" onclick="generate()">Çıktı Oluştur</button>
-</div>
+        function loadTransactions() {
+            const filtered = getFilteredTransactions();
+            const listDiv = document.getElementById('transactions-list');
+            
+            if (filtered.length === 0) {
+                listDiv.innerHTML = '<div class="empty-state">Henüz kayıt bulunmuyor. Yukarıdaki formdan yeni kayıt ekleyin.</div>';
+                return;
+            }
+            
+            let sorted = [...filtered];
+            
+            if (sortColumn === 'date') {
+                sorted.sort((a, b) => {
+                    const dateA = new Date(a.date);
+                    const dateB = new Date(b.date);
+                    return sortDirection === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+            } else if (sortColumn === 'amount') {
+                sorted.sort((a, b) => {
+                    return sortDirection === 'asc' ? a.amount - b.amount : b.amount - a.amount;
+                });
+            } else {
+                sorted.sort((a, b) => new Date(b.date) - new Date(a.date));
+            }
+            
+            // Mobil Kart Görünümü
+            let mobileHTML = '<div class="mobile-cards">';
+            sorted.forEach(t => {
+                mobileHTML += `
+                    <div class="mobile-card ${t.type === 'gider' ? 'expense' : ''}">
+                        <div class="mobile-card-header">
+                            <div>
+                                <div class="mobile-card-title">${t.patientName || (t.type === 'gider' ? 'Gider' : '-')}</div>
+                                <div class="mobile-card-subtitle">${new Date(t.date).toLocaleDateString('tr-TR')} • ${t.patientFileNo || '-'}</div>
+                            </div>
+                            <div class="mobile-card-amount ${t.type === 'gelir' ? 'income' : 'expense'}">
+                                ${t.type === 'gelir' ? '+' : '-'}${t.amount.toLocaleString('tr-TR')} ₺
+                            </div>
+                        </div>
+                        <div class="mobile-card-details">
+                            <span class="mobile-card-detail">${(t.paymentMethod || 'nakit').replace('-', ' ')}</span>
+                            ${t.description && t.description !== '-' ? `<span class="mobile-card-detail">${t.description}</span>` : ''}
+                        </div>
+                        <div class="mobile-card-actions">
+                            <button class="btn btn-warning" onclick="editTransaction(${t.id})">✏️ Düzenle</button>
+                            <button class="btn btn-danger" onclick="deleteTransaction(${t.id})">🗑️ Sil</button>
+                        </div>
+                    </div>
+                `;
+            });
+            mobileHTML += '</div>';
+            
+            // Desktop Tablo Görünümü
+            let desktopHTML = `
+                <div class="desktop-table">
+                <table>
+                    <thead>
+                        <tr>
+                            <th onclick="sortTable('date')" style="cursor: pointer;">
+                                Tarih ${sortColumn === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                            </th>
+                            <th>Tür</th>
+                            <th>Hasta</th>
+                            <th>Dosya No</th>
+                            <th>Not</th>
+                            <th>Ödeme Yöntemi</th>
+                            <th onclick="sortTable('amount')" style="text-align: right; cursor: pointer;">
+                                Tutar ${sortColumn === 'amount' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+                            </th>
+                            <th style="text-align: center;">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${sorted.map(t => `
+                            <tr>
+                                <td>${new Date(t.date).toLocaleDateString('tr-TR')}</td>
+                                <td><span class="badge ${t.type === 'gelir' ? 'badge-success' : 'badge-danger'}">${t.type === 'gelir' ? 'Ödeme' : 'Gider'}</span></td>
+                                <td>${t.patientName || '-'}</td>
+                                <td>${t.patientFileNo || '-'}</td>
+                                <td>${t.description}</td>
+                                <td style="text-transform: capitalize;">${t.paymentMethod?.replace('-', ' ')}</td>
+                                <td style="font-weight: bold; color: ${t.type === 'gelir' ? '#10b981' : '#ef4444'}; text-align: right;">${t.type === 'gelir' ? '+' : '-'}${t.amount.toLocaleString('tr-TR')} ₺</td>
+                                <td style="text-align: center;">
+                                        <button class="btn btn-warning" onclick="editTransaction(${t.id})" style="padding: 8px 14px; margin-right: 6px;">✏️</button>
+                                        <button class="btn btn-danger" onclick="deleteTransaction(${t.id})" style="padding: 8px 14px;">🗑️</button>
+                                    </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+                </div>
+            `;
+            
+            listDiv.innerHTML = mobileHTML + desktopHTML;
+        }
 
-<script>
-// ============ DATA ============
-const TEETH_UPPER = [18,17,16,15,14,13,12,11,21,22,23,24,25,26,27,28];
-const TEETH_LOWER = [48,47,46,45,44,43,42,41,31,32,33,34,35,36,37,38];
+        function sortTable(column) {
+            if (sortColumn === column) {
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                sortColumn = column;
+                sortDirection = column === 'date' ? 'desc' : 'desc';
+            }
+            loadTransactions();
+        }
 
-const DIAGNOSES = [
-  {code:'K02.0',name:'Mine çürüğü'},
-  {code:'K02.1',name:'Dentin çürüğü'},
-  {code:'K02.2',name:'Sement çürüğü'},
-  {code:'K02.3',name:'Durdurulmuş diş çürüğü'},
-  {code:'K02.5',name:'Diş pulpasını tutan çürük'},
-  {code:'K04.0',name:'Pulpitis'},
-  {code:'K04.1',name:'Pulpa nekrozu'},
-  {code:'K04.5',name:'Kronik apikal periodontitis'},
-  {code:'K04.6',name:'Periapikal apse (fistüllü)'},
-  {code:'K04.7',name:'Periapikal apse (fistülsüz)'},
-  {code:'K05.0',name:'Akut gingivitis'},
-  {code:'K05.1',name:'Kronik gingivitis'},
-  {code:'K05.2',name:'Akut periodontitis'},
-  {code:'K05.3',name:'Kronik periodontitis'},
-  {code:'K06.0',name:'Diş eti çekilmesi'},
-  {code:'K08.0',name:'Travma sonrası diş kaybı'},
-  {code:'K08.1',name:'Çürük nedeniyle diş kaybı'},
-  {code:'K08.3',name:'Kökü kalmış diş'},
-  {code:'K08.8',name:'Diş ve destekleyici yapı hastalıkları'},
-  {code:'K09.0',name:'Gelişimsel odontojen kist'},
-  {code:'S02.5',name:'Diş kırığı (travma)'},
-  {code:'Z01.2',name:'Diş muayenesi'},
-  {code:'Z46.3',name:'Protez uyumu kontrolü'},
-];
+        let patientSortColumn = 'fileNo';
+        let patientSortDirection = 'asc';
 
-const PROCEDURES = [
-  // Restoratif
-  'Amalgam dolgu (1 yüzey)','Amalgam dolgu (2 yüzey)','Amalgam dolgu (3+ yüzey)',
-  'Kompozit dolgu (1 yüzey)','Kompozit dolgu (2 yüzey)','Kompozit dolgu (3+ yüzey)',
-  'Cam iyonomer dolgu','Geçici dolgu','İnley / Onley',
-  // Endodonti
-  'Kanal tedavisi (ön diş)','Kanal tedavisi (küçük azı)','Kanal tedavisi (büyük azı)',
-  'Kanal tedavisi yenileme','Apikektomi',
-  // Cerrahi
-  'Diş çekimi (süt)','Diş çekimi (daimi)','Gömük diş çekimi (cerrahi)',
-  'Alveol küretaj','Frenektomi','Kist operasyonu',
-  // Protez
-  'Metal-seramik kron','Zirkonyum kron','Tam seramik kron',
-  'Sabit köprü (üye başı)','Hareketli kısmi protez','Tam protez',
-  'Protez tamiri','Protez yenileme',
-  // İmplant
-  'İmplant yerleştirme','İmplant üstü kron','Sinus lifting',
-  'Kemik grefti','Membran uygulaması',
-  // Ortodonti
-  'Braket yapıştırma','Braket aktivasyonu','Şeffaf plak',
-  'Piyasalarda retainer',
-  // Diğer
-  'Diş taşı temizliği','Diş beyazlatma','Flor uygulaması',
-  'Fissür örtücü','Apse drenajı','Periodontal cerrahi',
-  'Kontrol / Muayene','Röntgen (periapikal)','Röntgen (panoramik)',
-];
+        function sortPatientTable(column) {
+            if (patientSortColumn === column) {
+                patientSortDirection = patientSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                patientSortColumn = column;
+                patientSortDirection = 'asc';
+            }
+            loadPatients();
+        }
 
-let selTeeth = new Set();
-let selDiag = null;
-let selProc = null;
+        function loadPatients() {
+            try {
+                const searchInput = document.getElementById('patientSearch');
+                const searchText = searchInput ? searchInput.value.toLowerCase() : '';
+                
+                let filtered;
+                if (searchText) {
+                    filtered = patients.filter(p => {
+                        const name = (p.name || '').toLowerCase();
+                        const fileNo = (p.fileNo || '').toLowerCase();
+                        return name.includes(searchText) || fileNo.includes(searchText);
+                    });
+                } else {
+                    filtered = [...patients];
+                }
+                
+                const countEl = document.getElementById('patient-count');
+                if (countEl) countEl.textContent = patients.length;
+                
+                const listDiv = document.getElementById('patients-list');
+                if (!listDiv) {
+                    console.error('patients-list element bulunamadı');
+                    return;
+                }
+                
+                if (filtered.length === 0) {
+                    listDiv.innerHTML = '<div class="empty-state">Henüz hasta kaydı bulunmuyor. Ödeme ekleyerek otomatik hasta kaydı oluşturabilirsiniz.</div>';
+                    return;
+                }
+                
+                const sorted = [...filtered].sort((a, b) => {
+                    let comparison = 0;
+                    if (patientSortColumn === 'fileNo') {
+                        comparison = (a.fileNo || '').localeCompare(b.fileNo || '', 'tr', { numeric: true });
+                    } else if (patientSortColumn === 'name') {
+                        comparison = (a.name || '').localeCompare(b.name || '', 'tr');
+                    } else if (patientSortColumn === 'date') {
+                        comparison = new Date(a.createdAt || 0) - new Date(b.createdAt || 0);
+                    } else if (patientSortColumn === 'total') {
+                        const totalA = transactions.filter(t => t.patientId === a.id || (a.fileNo && t.patientFileNo === a.fileNo)).reduce((sum, t) => sum + t.amount, 0);
+                        const totalB = transactions.filter(t => t.patientId === b.id || (b.fileNo && t.patientFileNo === b.fileNo)).reduce((sum, t) => sum + t.amount, 0);
+                        comparison = totalA - totalB;
+                    }
+                    return patientSortDirection === 'asc' ? comparison : -comparison;
+                });
+                
+                const getSortIcon = (column) => {
+                    if (patientSortColumn === column) {
+                        return patientSortDirection === 'asc' ? ' ↑' : ' ↓';
+                    }
+                    return '';
+                };
+                
+                // Mobil Kart Görünümü
+                let mobileHTML = '<div class="mobile-cards">';
+                sorted.forEach(p => {
+                    const total = transactions
+                        .filter(t => t.patientId === p.id || (p.fileNo && t.patientFileNo === p.fileNo))
+                        .reduce((sum, t) => sum + t.amount, 0);
+                    
+                    mobileHTML += `
+                        <div class="patient-card">
+                            <div class="patient-card-header">
+                                <div>
+                                    <div class="patient-card-name">${p.name || '-'}</div>
+                                    <div class="patient-card-file">Dosya No: ${p.fileNo || '-'}</div>
+                                </div>
+                                <div>
+                                    <div class="patient-card-total">${total.toLocaleString('tr-TR')} ₺</div>
+                                    <div class="patient-card-date">${p.createdAt ? new Date(p.createdAt).toLocaleDateString('tr-TR') : '-'}</div>
+                                </div>
+                            </div>
+                            <div class="patient-card-actions">
+                                <button class="btn btn-primary" onclick="showPatientDetail(${p.id})">📋 Detay</button>
+                                <button class="btn btn-warning" onclick="editPatient(${p.id})">✏️ Düzenle</button>
+                                <button class="btn btn-danger" onclick="deletePatient(${p.id})">🗑️ Sil</button>
+                            </div>
+                        </div>
+                    `;
+                });
+                mobileHTML += '</div>';
+                
+                // Desktop Tablo Görünümü
+                let tableHTML = `
+                    <div class="desktop-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th onclick="sortPatientTable('fileNo')" style="cursor: pointer;">Dosya No${getSortIcon('fileNo')}</th>
+                                <th onclick="sortPatientTable('name')" style="cursor: pointer;">Hasta Adı${getSortIcon('name')}</th>
+                                <th onclick="sortPatientTable('date')" style="cursor: pointer;">Kayıt Tarihi${getSortIcon('date')}</th>
+                                <th onclick="sortPatientTable('total')" style="text-align: right; cursor: pointer;">Toplam Ödeme${getSortIcon('total')}</th>
+                                <th style="text-align: center;">İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                `;
+                
+                sorted.forEach(p => {
+                    const total = transactions
+                        .filter(t => t.patientId === p.id || (p.fileNo && t.patientFileNo === p.fileNo))
+                        .reduce((sum, t) => sum + t.amount, 0);
+                    
+                    tableHTML += `
+                        <tr>
+                            <td style="font-weight: bold;">${p.fileNo || '-'}</td>
+                            <td style="color: #667eea; font-weight: 600;">${p.name || '-'}</td>
+                            <td>${p.createdAt ? new Date(p.createdAt).toLocaleDateString('tr-TR') : '-'}</td>
+                            <td style="font-weight: bold; color: #10b981; text-align: right;">${total.toLocaleString('tr-TR')} ₺</td>
+                            <td style="text-align: center;">
+                                <button class="btn btn-primary" onclick="showPatientDetail(${p.id})" style="padding: 8px 16px; margin-right: 8px;">📋 Detay</button>
+                                <button class="btn btn-warning" onclick="editPatient(${p.id})" style="padding: 8px 16px; margin-right: 8px;">✏️ Düzenle</button>
+                                <button class="btn btn-danger" onclick="deletePatient(${p.id})">🗑️ Sil</button>
+                            </td>
+                        </tr>
+                    `;
+                });
+                
+                tableHTML += `
+                        </tbody>
+                    </table>
+                    </div>
+                `;
+                
+                listDiv.innerHTML = mobileHTML + tableHTML;
+            } catch (error) {
+                console.error('loadPatients hatası:', error);
+                const listDiv = document.getElementById('patients-list');
+                if (listDiv) {
+                    listDiv.innerHTML = '<div class="empty-state" style="color: red;">Hata oluştu: ' + error.message + '</div>';
+                }
+            }
+        }
 
-// ============ INIT ============
-document.addEventListener('DOMContentLoaded', () => {
-  // Today
-  const td = new Date().toISOString().split('T')[0];
-  document.getElementById('v_date').value = td;
+        function editPatient(id) {
+            const patient = patients.find(p => p.id === id);
+            if (!patient) return;
+            
+            const newName = prompt('Hasta Adı:', patient.name);
+            if (newName === null) return;
+            
+            const newFileNo = prompt('Dosya Numarası:', patient.fileNo);
+            if (newFileNo === null) return;
+            
+            if (!newName.trim() || !newFileNo.trim()) {
+                alert('❌ Hasta adı ve dosya numarası boş olamaz!');
+                return;
+            }
+            
+            // Aynı dosya numarası başka hastada var mı kontrol et
+            const duplicate = patients.find(p => p.id !== id && p.fileNo === newFileNo.trim());
+            if (duplicate) {
+                alert('❌ Bu dosya numarası başka bir hastaya ait: ' + duplicate.name);
+                return;
+            }
+            
+            const oldFileNo = patient.fileNo;
+            
+            // Hasta bilgilerini güncelle
+            patient.name = newName.trim();
+            patient.fileNo = newFileNo.trim();
+            
+            // İlgili işlemleri de güncelle
+            transactions.forEach(t => {
+                if (t.patientId === id || t.patientFileNo === oldFileNo) {
+                    t.patientName = newName.trim();
+                    t.patientFileNo = newFileNo.trim();
+                }
+            });
+            
+            localStorage.setItem('patients', JSON.stringify(patients));
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            
+            loadPatients();
+            loadTransactions();
+            
+            alert('✅ Hasta bilgileri güncellendi!');
+        }
 
-  // Telegram init
-  if(window.Telegram?.WebApp) {
-    Telegram.WebApp.ready();
-    Telegram.WebApp.expand();
-  }
+        function showPatientDetail(id) {
+            selectedPatient = patients.find(p => p.id === id);
+            if (!selectedPatient) return;
+            
+            const patientTransactions = transactions.filter(t => 
+                t.patientId === selectedPatient.id || (selectedPatient.fileNo && t.patientFileNo === selectedPatient.fileNo)
+            );
+            const total = patientTransactions.reduce((sum, t) => sum + t.amount, 0);
+            const avg = patientTransactions.length > 0 ? total / patientTransactions.length : 0;
+            
+            document.getElementById('patient-list-view').classList.add('hidden');
+            document.getElementById('patient-detail-view').classList.remove('hidden');
+            
+            document.getElementById('patient-detail').innerHTML = `
+                <div class="patient-detail">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <div>
+                            <h2>${selectedPatient.name}</h2>
+                            <p style="font-size: 16px; opacity: 0.9;">Dosya No: ${selectedPatient.fileNo || '⏳ Atanmamış'}</p>
+                            <p style="font-size: 14px; opacity: 0.8;">Kayıt Tarihi: ${new Date(selectedPatient.createdAt).toLocaleDateString('tr-TR')}</p>
+                        </div>
+                        <button onclick="editPatientFromDetail()" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 10px; font-weight: 600; cursor: pointer; font-size: 16px;">✏️ Düzenle</button>
+                    </div>
+                </div>
+                
+                ${!selectedPatient.fileNo ? `
+                <div style="background: #fff4e6; border-left: 4px solid #f59e0b; padding: 15px; border-radius: 10px; margin-bottom: 20px;">
+                    <strong style="color: #92400e;">⏳ Dosya numarası atanmamış</strong>
+                    <button class="btn btn-success" onclick="assignFileNo(${selectedPatient.id})" style="margin-left: 15px; padding: 8px 16px;">📁 Dosya No Ata</button>
+                </div>
+                ` : ''}
+                
+                <div class="stats">
+                    <div class="stat-card stat-green">
+                        <h3>Toplam Ödeme</h3>
+                        <p>${total.toLocaleString('tr-TR')} ₺</p>
+                    </div>
+                    <div class="stat-card stat-blue">
+                        <h3>Ödeme Sayısı</h3>
+                        <p>${patientTransactions.length}</p>
+                    </div>
+                    <div class="stat-card stat-purple">
+                        <h3>Ortalama Ödeme</h3>
+                        <p>${avg.toLocaleString('tr-TR', {maximumFractionDigits: 0})} ₺</p>
+                    </div>
+                </div>
+                
+                <h2>Hasta Notları</h2>
+                <div style="background: #fff4e6; border-left: 4px solid #f59e0b; padding: 20px; border-radius: 10px; margin-bottom: 30px;">
+                    <textarea 
+                        id="patient-notes" 
+                        style="width: 100%; min-height: 100px; padding: 12px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 15px; font-family: inherit; resize: vertical;"
+                        placeholder="Hasta hakkında notlar ekleyin..."
+                    >${selectedPatient.notes || ''}</textarea>
+                    <button class="btn btn-primary" onclick="savePatientNotes()" style="margin-top: 10px;">💾 Notu Kaydet</button>
+                </div>
+                
+                <h2>Ödeme Geçmişi</h2>
+                ${patientTransactions.length === 0 ? '<div class="empty-state">Henüz ödeme kaydı bulunmuyor</div>' : `
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Not</th>
+                                <th>Ödeme Yöntemi</th>
+                                <th style="text-align: right;">Tutar</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${patientTransactions.sort((a, b) => new Date(b.date) - new Date(a.date)).map(t => `
+                                <tr>
+                                    <td>${new Date(t.date).toLocaleDateString('tr-TR')}</td>
+                                    <td>${t.description}</td>
+                                    <td style="text-transform: capitalize;">${t.paymentMethod?.replace('-', ' ')}</td>
+                                    <td style="font-weight: bold; color: #10b981; text-align: right;">${t.amount.toLocaleString('tr-TR')} ₺</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                `}
+            `;
+        }
 
-  buildToothGrid();
-  buildProcList();
-  buildDiagList();
-});
+        function savePatientNotes() {
+            const notes = document.getElementById('patient-notes').value;
+            const patientIndex = patients.findIndex(p => p.id === selectedPatient.id);
+            
+            if (patientIndex !== -1) {
+                patients[patientIndex].notes = notes;
+                localStorage.setItem('patients', JSON.stringify(patients));
+                selectedPatient.notes = notes;
+                alert('✅ Not başarıyla kaydedildi!');
+            }
+        }
 
-// ============ TABS ============
-function switchTab(i) {
-  document.querySelectorAll('.section').forEach((s,idx) => s.classList.toggle('active', idx===i));
-  document.querySelectorAll('.tab').forEach((t,idx) => t.classList.toggle('active', idx===i));
-  if(i===3) generate();
-}
+        function editPatientFromDetail() {
+            if (!selectedPatient) return;
+            
+            const newName = prompt('Hasta Adı:', selectedPatient.name);
+            if (newName === null) return;
+            
+            const newFileNo = prompt('Dosya Numarası (boş bırakılabilir):', selectedPatient.fileNo || '');
+            if (newFileNo === null) return;
+            
+            if (!newName.trim()) {
+                alert('❌ Hasta adı boş olamaz!');
+                return;
+            }
+            
+            // Eğer dosya numarası girildiyse, başka hastada var mı kontrol et
+            if (newFileNo.trim()) {
+                const duplicate = patients.find(p => p.id !== selectedPatient.id && p.fileNo === newFileNo.trim());
+                if (duplicate) {
+                    alert('❌ Bu dosya numarası başka bir hastaya ait: ' + duplicate.name);
+                    return;
+                }
+            }
+            
+            const oldFileNo = selectedPatient.fileNo;
+            const patientIndex = patients.findIndex(p => p.id === selectedPatient.id);
+            
+            if (patientIndex !== -1) {
+                // Hasta bilgilerini güncelle
+                patients[patientIndex].name = newName.trim();
+                patients[patientIndex].fileNo = newFileNo.trim();
+                patients[patientIndex].hasNoFileNo = !newFileNo.trim();
+                
+                // İlgili işlemleri de güncelle
+                transactions.forEach(t => {
+                    if (t.patientId === selectedPatient.id || (oldFileNo && t.patientFileNo === oldFileNo)) {
+                        t.patientName = newName.trim();
+                        t.patientFileNo = newFileNo.trim();
+                    }
+                });
+                
+                localStorage.setItem('patients', JSON.stringify(patients));
+                localStorage.setItem('transactions', JSON.stringify(transactions));
+                
+                selectedPatient = patients[patientIndex];
+                showPatientDetail(selectedPatient.id);
+                loadNoFilePatients();
+                
+                alert('✅ Hasta bilgileri güncellendi!');
+            }
+        }
 
-// ============ TOOTH GRID ============
-function buildToothGrid() {
-  const grid = document.getElementById('toothGrid');
-  const makeTooth = n => {
-    const d = document.createElement('div');
-    d.className = 'tooth'; d.textContent = n; d.dataset.n = n;
-    d.onclick = () => toggleTooth(d, n);
-    return d;
-  };
-  TEETH_UPPER.forEach(n => grid.appendChild(makeTooth(n)));
-  const sep = document.createElement('div'); sep.className='tooth-separator'; grid.appendChild(sep);
-  TEETH_LOWER.forEach(n => grid.appendChild(makeTooth(n)));
-}
-function toggleTooth(el, n) {
-  if(selTeeth.has(n)) { selTeeth.delete(n); el.classList.remove('selected'); }
-  else { selTeeth.add(n); el.classList.add('selected'); }
-  const arr = [...selTeeth].sort((a,b)=>a-b);
-  document.getElementById('toothDisplay').textContent =
-    arr.length ? 'Seçili: ' + arr.join(', ') : 'Diş seçilmedi';
-}
+        function backToPatientList() {
+            selectedPatient = null;
+            document.getElementById('patient-list-view').classList.remove('hidden');
+            document.getElementById('patient-detail-view').classList.add('hidden');
+            loadPatients();
+            loadNoFilePatients();
+        }
 
-// ============ PROC LIST ============
-function buildProcList(filter='') {
-  const list = document.getElementById('procList');
-  list.innerHTML = '';
-  const fl = filter.toLowerCase();
-  PROCEDURES.filter(p => !fl || p.toLowerCase().includes(fl)).forEach(p => {
-    const div = document.createElement('div');
-    div.className = 'proc-item' + (selProc===p?' selected':'');
-    div.innerHTML = `<span class="proc-dot"></span>${p}`;
-    div.onclick = () => { selProc = selProc===p?null:p; buildProcList(fl); };
-    list.appendChild(div);
-  });
-}
-function filterProcs() { buildProcList(document.getElementById('procSearch').value); }
+        // Hasta sekmesi tab değiştirme
+        function showPatientTab(tab) {
+            const tabAll = document.getElementById('tab-all-patients');
+            const tabNoFile = document.getElementById('tab-no-file');
+            const sectionAll = document.getElementById('all-patients-section');
+            const sectionNoFile = document.getElementById('no-file-patients-section');
+            
+            if (tab === 'all') {
+                tabAll.classList.add('btn-primary');
+                tabAll.style.background = '';
+                tabAll.style.color = '';
+                tabNoFile.classList.remove('btn-primary');
+                tabNoFile.style.background = '#e0e0e0';
+                tabNoFile.style.color = '#333';
+                sectionAll.classList.remove('hidden');
+                sectionNoFile.classList.add('hidden');
+            } else {
+                tabNoFile.classList.add('btn-primary');
+                tabNoFile.style.background = '';
+                tabNoFile.style.color = '';
+                tabAll.classList.remove('btn-primary');
+                tabAll.style.background = '#e0e0e0';
+                tabAll.style.color = '#333';
+                sectionNoFile.classList.remove('hidden');
+                sectionAll.classList.add('hidden');
+                loadNoFilePatients();
+            }
+        }
 
-// ============ DIAG LIST ============
-function buildDiagList(filter='') {
-  const list = document.getElementById('diagList');
-  list.innerHTML = '';
-  const fl = filter.toLowerCase();
-  DIAGNOSES.filter(d => !fl || d.code.toLowerCase().includes(fl) || d.name.toLowerCase().includes(fl)).forEach(d => {
-    const div = document.createElement('div');
-    div.className = 'diag-item' + (selDiag===d.code?' selected':'');
-    div.innerHTML = `<div class="diag-code">${d.code}</div><div class="diag-name">${d.name}</div>`;
-    div.onclick = () => { selDiag = selDiag===d.code?null:d.code; buildDiagList(fl); };
-    list.appendChild(div);
-  });
-}
-function filterDiag() { buildDiagList(document.getElementById('diagSearch').value); }
+        // Dosya numarası olmayan hastaları yükle
+        function loadNoFilePatients() {
+            const noFilePatients = patients.filter(p => !p.fileNo || p.fileNo === '');
+            const countEl = document.getElementById('no-file-count');
+            if (countEl) countEl.textContent = noFilePatients.length;
+            
+            const listDiv = document.getElementById('no-file-patients-list');
+            if (!listDiv) return;
+            
+            if (noFilePatients.length === 0) {
+                listDiv.innerHTML = '<div class="empty-state">🎉 Tüm hastalara dosya numarası atanmış!</div>';
+                return;
+            }
+            
+            let html = '<div class="no-file-list">';
+            noFilePatients.forEach(p => {
+                const total = transactions
+                    .filter(t => t.patientId === p.id)
+                    .reduce((sum, t) => sum + t.amount, 0);
+                
+                html += `
+                    <div class="mobile-card" style="border-left-color: #f59e0b;">
+                        <div class="mobile-card-header">
+                            <div>
+                                <div class="mobile-card-title">${p.name || '-'}</div>
+                                <div class="mobile-card-subtitle">⏳ Dosya No Bekliyor • ${p.createdAt ? new Date(p.createdAt).toLocaleDateString('tr-TR') : '-'}</div>
+                            </div>
+                            <div class="mobile-card-amount income">${total.toLocaleString('tr-TR')} ₺</div>
+                        </div>
+                        <div class="mobile-card-actions">
+                            <button class="btn btn-success" onclick="assignFileNo(${p.id})" style="flex: 2;">📁 Dosya No Ata</button>
+                            <button class="btn btn-primary" onclick="showPatientDetail(${p.id})" style="flex: 1;">📋</button>
+                            <button class="btn btn-danger" onclick="deletePatient(${p.id})" style="flex: 1;">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            html += '</div>';
+            
+            listDiv.innerHTML = html;
+        }
 
-// ============ TAGS ============
-function selTag(el, group) {
-  if(group==='payType') {
-    document.querySelectorAll('#payTypeTags .tag').forEach(t=>t.classList.remove('selected'));
-    el.classList.add('selected');
-    document.getElementById('installCard').style.display = el.textContent==='Taksit'?'block':'none';
-  } else if(group==='payStatus') {
-    document.querySelectorAll('#payStatusTags .tag').forEach(t=>t.classList.remove('selected'));
-    el.classList.add('selected');
-    document.getElementById('partialCard').style.display = el.textContent==='Kısmi Ödeme'?'block':'none';
-  }
-}
+        // Dosya numarası atama
+        function assignFileNo(id) {
+            const patient = patients.find(p => p.id === id);
+            if (!patient) return;
+            
+            const newFileNo = prompt('Dosya Numarası Atayın:', '');
+            if (newFileNo === null) return;
+            
+            if (!newFileNo.trim()) {
+                alert('❌ Dosya numarası boş olamaz!');
+                return;
+            }
+            
+            // Aynı dosya numarası var mı kontrol et
+            const duplicate = patients.find(p => p.id !== id && p.fileNo === newFileNo.trim());
+            if (duplicate) {
+                alert('❌ Bu dosya numarası başka bir hastaya ait: ' + duplicate.name);
+                return;
+            }
+            
+            // Hasta bilgilerini güncelle
+            patient.fileNo = newFileNo.trim();
+            patient.hasNoFileNo = false;
+            
+            // İlgili işlemleri de güncelle
+            transactions.forEach(t => {
+                if (t.patientId === id) {
+                    t.patientFileNo = newFileNo.trim();
+                }
+            });
+            
+            localStorage.setItem('patients', JSON.stringify(patients));
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            
+            loadPatients();
+            loadNoFilePatients();
+            loadTransactions();
+            
+            alert('✅ Dosya numarası atandı: ' + newFileNo.trim());
+        }
 
-// ============ GENERATE ============
-function generate() {
-  const name   = document.getElementById('p_name').value.trim() || '—';
-  const tc     = document.getElementById('p_tc').value.trim() || '—';
-  const dob    = document.getElementById('p_dob').value || '—';
-  const phone  = document.getElementById('p_phone').value.trim() || '—';
-  const gender = document.getElementById('p_gender').value || '—';
-  const vdate  = document.getElementById('v_date').value || new Date().toISOString().split('T')[0];
-  const compl  = document.getElementById('v_complaint').value.trim() || '—';
-  const note   = document.getElementById('t_note').value.trim() || '';
+        function toggleStats() {
+            statsVisible = !statsVisible;
+            const statsDiv = document.getElementById('stats');
+            const toggleBtn = document.getElementById('toggle-stats-btn');
+            
+            if (statsVisible) {
+                statsDiv.style.display = 'grid';
+                toggleBtn.textContent = '🔒 Gizle';
+            } else {
+                statsDiv.style.display = 'none';
+                toggleBtn.textContent = '👁️ Göster';
+            }
+            
+            if (statsVisible) {
+                loadStatsContent();
+            }
+        }
 
-  const amount   = parseFloat(document.getElementById('pay_amount').value) || 0;
-  const discount = parseFloat(document.getElementById('pay_discount').value) || 0;
-  const net      = amount - discount;
+        function loadStats() {
+            if (statsVisible) {
+                loadStatsContent();
+            }
+            loadMonthlyAnalysis();
+        }
 
-  const payTypeEl = document.querySelector('#payTypeTags .tag.selected');
-  const payType   = payTypeEl ? payTypeEl.textContent : '—';
-  const payStatEl = document.querySelector('#payStatusTags .tag.selected');
-  const payStatus = payStatEl ? payStatEl.textContent : '—';
-  const instCount = document.getElementById('pay_inst').value;
-  const partial   = parseFloat(document.getElementById('pay_partial').value) || 0;
+        function loadStatsContent() {
+            const filtered = getFilteredTransactions();
+            const income = filtered.filter(t => t.type === 'gelir').reduce((sum, t) => sum + t.amount, 0);
+            const expense = filtered.filter(t => t.type === 'gider').reduce((sum, t) => sum + t.amount, 0);
+            const balance = income - expense;
+            
+            document.getElementById('stats').innerHTML = `
+                <div class="stat-card stat-green">
+                    <h3>Toplam Ciro</h3>
+                    <p>${income.toLocaleString('tr-TR')} ₺</p>
+                </div>
+                <div class="stat-card stat-red">
+                    <h3>Toplam Gider</h3>
+                    <p>${expense.toLocaleString('tr-TR')} ₺</p>
+                </div>
+                <div class="stat-card stat-blue">
+                    <h3>Net Kâr</h3>
+                    <p>${balance.toLocaleString('tr-TR')} ₺</p>
+                </div>
+            `;
+        }
 
-  const diagObj   = selDiag ? DIAGNOSES.find(d=>d.code===selDiag) : null;
-  const diagStr   = diagObj ? `${diagObj.code} – ${diagObj.name}` : '—';
-  const teethStr  = selTeeth.size ? [...selTeeth].sort((a,b)=>a-b).join(', ') : '—';
+        function loadMonthlyAnalysis() {
+            const monthlyData = {};
+            
+            transactions.forEach(t => {
+                const date = new Date(t.date);
+                const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const monthName = date.toLocaleDateString('tr-TR', { year: 'numeric', month: 'long' });
+                
+                if (!monthlyData[monthKey]) {
+                    monthlyData[monthKey] = {
+                        name: monthName,
+                        gelir: 0,
+                        gider: 0,
+                        kar: 0,
+                        paymentMethods: {}
+                    };
+                }
+                
+                if (t.type === 'gelir') {
+                    monthlyData[monthKey].gelir += t.amount;
+                    const method = t.paymentMethod || 'belirtilmemiş';
+                    monthlyData[monthKey].paymentMethods[method] = (monthlyData[monthKey].paymentMethods[method] || 0) + t.amount;
+                } else {
+                    monthlyData[monthKey].gider += t.amount;
+                }
+                monthlyData[monthKey].kar = monthlyData[monthKey].gelir - monthlyData[monthKey].gider;
+            });
+            
+            const sorted = Object.keys(monthlyData).sort().reverse().slice(0, 12);
+            
+            if (sorted.length === 0) {
+                document.getElementById('monthly-analysis').innerHTML = '<div class="empty-state">Henüz aylık veri bulunmuyor</div>';
+                return;
+            }
+            
+            let html = `
+                <div style="background: white; border-radius: 15px; padding: 20px; box-shadow: 0 5px 20px rgba(0,0,0,0.1);">
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="border-bottom: 2px solid #667eea;">
+                                <th style="padding: 15px; text-align: left; background: #667eea; color: white; font-weight: 600;">Ay</th>
+                                <th style="padding: 15px; text-align: right; background: #667eea; color: white; font-weight: 600;">Ciro</th>
+                                <th style="padding: 15px; text-align: right; background: #667eea; color: white; font-weight: 600;">Gider</th>
+                                <th style="padding: 15px; text-align: right; background: #667eea; color: white; font-weight: 600;">Kâr</th>
+                                <th style="padding: 15px; text-align: right; background: #667eea; color: white; font-weight: 600;">Kâr Marjı</th>
+                                <th style="padding: 15px; text-align: left; background: #667eea; color: white; font-weight: 600;">Ödeme Yöntemleri</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            sorted.forEach(key => {
+                const data = monthlyData[key];
+                const margin = data.gelir > 0 ? ((data.kar / data.gelir) * 100).toFixed(1) : 0;
+                
+                let paymentMethodsText = '';
+                Object.entries(data.paymentMethods).forEach(([method, amount]) => {
+                    const methodName = method.replace('-', ' ');
+                    paymentMethodsText += `<div style="font-size: 13px; margin-bottom: 4px;"><strong>${methodName.charAt(0).toUpperCase() + methodName.slice(1)}:</strong> ${amount.toLocaleString('tr-TR')} ₺</div>`;
+                });
+                
+                html += `
+                    <tr style="border-bottom: 1px solid #e0e0e0;">
+                        <td style="padding: 14px; font-weight: 600; color: #333;">${data.name}</td>
+                        <td style="padding: 14px; text-align: right; color: #10b981; font-weight: bold; font-size: 15px;">${data.gelir.toLocaleString('tr-TR')} ₺</td>
+                        <td style="padding: 14px; text-align: right; color: #ef4444; font-weight: bold; font-size: 15px;">${data.gider.toLocaleString('tr-TR')} ₺</td>
+                        <td style="padding: 14px; text-align: right; color: ${data.kar >= 0 ? '#3b82f6' : '#f59e0b'}; font-weight: bold; font-size: 15px;">${data.kar.toLocaleString('tr-TR')} ₺</td>
+                        <td style="padding: 14px; text-align: right; font-weight: 600; font-size: 15px; color: #667eea;">${margin}%</td>
+                        <td style="padding: 14px;">${paymentMethodsText}</td>
+                    </tr>
+                `;
+            });
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            document.getElementById('monthly-analysis').innerHTML = html;
+        }
 
-  // ---- E-Nabız formatı ----
-  const vdFmt = vdate.split('-').reverse().join('.');
-  const dobFmt = dob!=='—' ? dob.split('-').reverse().join('.') : '—';
-  let enaText = `📋 HASTA BİLGİ FORMU
-━━━━━━━━━━━━━━━━━━━━━━━━━
-Tarih       : ${vdFmt}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-Ad Soyad    : ${name}
-T.C. No     : ${tc}
-Doğum Tar.  : ${dobFmt}
-Cinsiyet    : ${gender}
-Telefon     : ${phone}
-━━━━━━━━━━━━━━━━━━━━━━━━━
-Şikayet     : ${compl}
-Teşhis      : ${diagStr}
-Diş No      : ${teethStr}
-İşlem       : ${selProc || '—'}
-${note ? 'Not         : '+note+'\n' : ''}━━━━━━━━━━━━━━━━━━━━━━━━━
-Ücret       : ${amount.toLocaleString('tr-TR')} ₺${discount>0 ? '\nİndirim     : -'+discount.toLocaleString('tr-TR')+' ₺\nNet         : '+net.toLocaleString('tr-TR')+' ₺':''}
-Ödeme       : ${payType}${payType==='Taksit'?' ('+instCount+' taksit)':''}
-Durum       : ${payStatus}${payStatus==='Kısmi Ödeme'?' | Ödenen: '+partial.toLocaleString('tr-TR')+' ₺':''}`;
+        function exportToExcel() {
+            const filtered = getFilteredTransactions();
+            let csv = 'Tarih,Tür,Hasta,Dosya No,Açıklama,Ödeme Yöntemi,Tutar\n';
+            filtered.sort((a, b) => new Date(b.date) - new Date(a.date)).forEach(t => {
+                const row = [
+                    new Date(t.date).toLocaleDateString('tr-TR'),
+                    t.type === 'gelir' ? 'Gelir' : 'Gider',
+                    t.patientName || '-',
+                    t.patientFileNo || '-',
+                    t.description,
+                    t.paymentMethod,
+                    t.amount
+                ];
+                csv += row.map(cell => '"' + cell + '"').join(',') + '\n';
+            });
+            
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'klinik_rapor_' + new Date().toISOString().split('T')[0] + '.csv';
+            link.click();
+        }
 
-  document.getElementById('enaOut').textContent = enaText;
+        function downloadBackup() {
+            const backupData = {
+                version: '1.0',
+                date: new Date().toISOString(),
+                transactions: transactions,
+                patients: patients
+            };
+            
+            const dataStr = JSON.stringify(backupData, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'klinik_yedek_' + new Date().toISOString().split('T')[0] + '.json';
+            link.click();
+            
+            alert('✅ Yedek başarıyla indirildi!\n\nBu dosyayı Google Drive veya güvenli bir yere kaydedin.');
+        }
 
-  // ---- JSON (klinik app formatı) ----
-  const rec = {
-    id: 'TWA_' + Date.now(),
-    source: 'telegram_web_app',
-    patient: { name, tc, dob, phone, gender },
-    visit: {
-      date: vdate,
-      complaint: compl,
-      teeth: [...selTeeth].sort((a,b)=>a-b),
-      diagnosis: diagObj || null,
-      procedure: selProc || null,
-      note,
-    },
-    payment: {
-      amount, discount, net,
-      type: payType,
-      status: payStatus,
-      installments: payType==='Taksit' ? parseInt(instCount) : null,
-      partialPaid: payStatus==='Kısmi Ödeme' ? partial : null,
-    }
-  };
-
-  document.getElementById('jsonOut').textContent = JSON.stringify(rec, null, 2);
-}
-
-// ============ COPY ============
-function copyText(id) {
-  const txt = document.getElementById(id).textContent;
-  if(txt==='—') return;
-  navigator.clipboard.writeText(txt).then(()=>toast('Kopyalandı ✓')).catch(()=>{
-    // fallback
-    const ta = document.createElement('textarea');
-    ta.value = txt; document.body.appendChild(ta);
-    ta.select(); document.execCommand('copy');
-    document.body.removeChild(ta); toast('Kopyalandı ✓');
-  });
-}
-
-function toast(msg) {
-  const el = document.getElementById('toast');
-  el.textContent = msg; el.classList.add('show');
-  setTimeout(()=>el.classList.remove('show'), 2000);
-}
-
-// ============ IMPORT to clinic app ============
-function importToClinic() {
-  generate();
-  const jsonStr = document.getElementById('jsonOut').textContent;
-  if(jsonStr==='—') { toast('Önce veri girin'); return; }
-  try {
-    const rec = JSON.parse(jsonStr);
-    // Klinik uygulamasının kullandığı key
-    const existing = JSON.parse(localStorage.getItem('klinik_patients') || '[]');
-    // Aynı id varsa güncelle, yoksa ekle
-    const idx = existing.findIndex(r=>r.id===rec.id);
-    if(idx>=0) existing[idx]=rec; else existing.push(rec);
-    localStorage.setItem('klinik_patients', JSON.stringify(existing));
-    toast('Klinik uygulamasına aktarıldı ✓');
-  } catch(e) { toast('Hata: '+e.message); }
-}
-
-// ============ CLEAR ============
-function clearAll() {
-  ['p_name','p_tc','p_phone','v_complaint','t_note','pay_amount','pay_discount','pay_partial']
-    .forEach(id=>document.getElementById(id).value='');
-  document.getElementById('p_dob').value='';
-  document.getElementById('p_gender').value='';
-  document.getElementById('v_date').value=new Date().toISOString().split('T')[0];
-  selTeeth.clear();
-  selProc=null; selDiag=null;
-  document.querySelectorAll('.tooth.selected').forEach(t=>t.classList.remove('selected'));
-  document.getElementById('toothDisplay').textContent='Diş seçilmedi';
-  document.querySelectorAll('#payTypeTags .tag').forEach(t=>t.classList.remove('selected'));
-  document.querySelectorAll('#payStatusTags .tag').forEach((t,i)=>t.classList.toggle('selected',i===0));
-  buildProcList(); buildDiagList();
-  document.getElementById('enaOut').textContent='—';
-  document.getElementById('jsonOut').textContent='—';
-  document.getElementById('installCard').style.display='none';
-  document.getElementById('partialCard').style.display='none';
-  toast('Temizlendi');
-}
-</script>
+        function restoreBackup(input) {
+            const file = input.files[0];
+            if (!file) return;
+            
+            if (!confirm('⚠️ DİKKAT!\n\nMevcut verileriniz silinip yedeğiniz yüklenecek.\n\nDevam etmek istediğinize emin misiniz?')) {
+                input.value = '';
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const backupData = JSON.parse(e.target.result);
+                    
+                    if (!backupData.transactions || !backupData.patients) {
+                        throw new Error('Geçersiz yedek dosyası');
+                    }
+                    
+                    transactions = backupData.transactions;
+                    patients = backupData.patients;
+                    
+                    localStorage.setItem('transactions', JSON.stringify(transactions));
+                    localStorage.setItem('patients', JSON.stringify(patients));
+                    
+                    updateYearFilter();
+                    loadTransactions();
+                    loadPatients();
+                    loadStats();
+                    
+                    alert('✅ Yedek başarıyla geri yüklendi!\n\n' + 
+                          transactions.length + ' işlem ve ' + 
+                          patients.length + ' hasta kaydı yüklendi.');
+                } catch (error) {
+                    alert('❌ Hata!\n\nYedek dosyası bozuk veya geçersiz.\n\nLütfen doğru dosyayı seçtiğinizden emin olun.');
+                }
+                input.value = '';
+            };
+            reader.readAsText(file);
+        }
+    </script>
 </body>
 </html>
